@@ -656,7 +656,11 @@ export enum Pkm {
   EXEGGCUTE = "EXEGGCUTE",
   EXEGGUTOR = "EXEGGUTOR",
   ALOLAN_EXEGGUTOR = "ALOLAN_EXEGGUTOR",
-  CARNIVINE = "CARNIVINE"
+  CARNIVINE = "CARNIVINE",
+  MANTYKE = "MANTYKE",
+  MANTINE = "MANTINE",
+  REMORAID = "REMORAID",
+  OCTILLERY = "OCTILLERY"
 }
 
 export const PkmIndex: { [key in Pkm]: string } = {
@@ -1315,7 +1319,11 @@ export const PkmIndex: { [key in Pkm]: string } = {
   [Pkm.EXEGGCUTE]: "0102",
   [Pkm.EXEGGUTOR]: "0103",
   [Pkm.ALOLAN_EXEGGUTOR]: "0103-0001",
-  [Pkm.CARNIVINE]: "0455"
+  [Pkm.CARNIVINE]: "0455",
+  [Pkm.MANTYKE]: "0458",
+  [Pkm.MANTINE]: "0226",
+  [Pkm.REMORAID]: "0223",
+  [Pkm.OCTILLERY]: "0224"
 }
 
 export const PkmFamily: { [key in Pkm]: Pkm } = {
@@ -1974,7 +1982,11 @@ export const PkmFamily: { [key in Pkm]: Pkm } = {
   [Pkm.EXEGGCUTE]: Pkm.EXEGGCUTE,
   [Pkm.EXEGGUTOR]: Pkm.EXEGGCUTE,
   [Pkm.ALOLAN_EXEGGUTOR]: Pkm.EXEGGCUTE,
-  [Pkm.CARNIVINE]: Pkm.CARNIVINE
+  [Pkm.CARNIVINE]: Pkm.CARNIVINE,
+  [Pkm.MANTYKE]: Pkm.MANTYKE,
+  [Pkm.MANTINE]: Pkm.MANTYKE,
+  [Pkm.REMORAID]: Pkm.REMORAID,
+  [Pkm.OCTILLERY]: Pkm.OCTILLERY
 }
 
 export enum PkmDuo {
@@ -5382,6 +5394,26 @@ export const AnimationConfig: {
     emote: AnimationType.Dance
   },
   [Pkm.CARNIVINE]: {
+    attack: AnimationType.Attack,
+    ability: AnimationType.Shoot,
+    emote: AnimationType.RearUp
+  },
+  [Pkm.MANTYKE]: {
+    attack: AnimationType.Attack,
+    ability: AnimationType.Shoot,
+    emote: AnimationType.Charge
+  },
+  [Pkm.MANTINE]: {
+    attack: AnimationType.Attack,
+    ability: AnimationType.Shoot,
+    emote: AnimationType.Charge
+  },
+  [Pkm.REMORAID]: {
+    attack: AnimationType.Attack,
+    ability: AnimationType.Shoot,
+    emote: AnimationType.RearUp
+  },
+  [Pkm.OCTILLERY]: {
     attack: AnimationType.Attack,
     ability: AnimationType.Shoot,
     emote: AnimationType.RearUp

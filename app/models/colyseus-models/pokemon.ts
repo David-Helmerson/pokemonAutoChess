@@ -10686,6 +10686,65 @@ export class Inteleon extends Pokemon {
   attackSprite = AttackSprite.WATER_RANGE
 }
 
+export class Mantyke extends Pokemon {
+  types = new SetSchema<Synergy>([Synergy.WATER, Synergy.FLYING])
+  rarity = Rarity.RARE
+  stars = 1
+  hp = 80
+  atk = 5
+  def = 3
+  speDef = 6
+  maxPP = 100
+  range = 1
+  skill = Ability.BOUNCE
+  attackSprite = AttackSprite.WATER_MELEE
+  passive = Passive.MANTYKE
+}
+
+export class Mantine extends Pokemon {
+  types = new SetSchema<Synergy>([Synergy.WATER, Synergy.FLYING])
+  rarity = Rarity.RARE
+  stars = 2
+  hp = 200
+  atk = 14
+  def = 7
+  speDef = 10
+  maxPP = 100
+  range = 1
+  skill = Ability.BOUNCE
+  attackSprite = AttackSprite.WATER_MELEE
+  passive = Passive.MANTYKE
+}
+
+export class Remoraid extends Pokemon {
+  types = new SetSchema<Synergy>([Synergy.WATER])
+  rarity = Rarity.SPECIAL
+  stars = 1
+  hp = 70
+  atk = 8
+  def = 1
+  speDef = 1
+  maxPP = 100
+  range = 4
+  skill = Ability.OCTAZOOKA
+  attackSprite = AttackSprite.WATER_RANGE
+}
+
+export class Octillery extends Pokemon {
+  types = new SetSchema<Synergy>([Synergy.WATER])
+  rarity = Rarity.SPECIAL
+  stars = 2
+  hp = 150
+  atk = 22
+  def = 3
+  speDef = 3
+  maxPP = 100
+  range = 4
+  skill = Ability.OCTAZOOKA
+  attackSprite = AttackSprite.WATER_RANGE
+}
+
+
 export const PokemonClasses: Record<
   Pkm,
   new (shiny: boolean, emotion: Emotion) => Pokemon
@@ -11345,5 +11404,9 @@ export const PokemonClasses: Record<
   [Pkm.EXEGGCUTE]: Exeggcute,
   [Pkm.EXEGGUTOR]: Exeggcutor,
   [Pkm.ALOLAN_EXEGGUTOR]: AlolanExeggutor,
-  [Pkm.CARNIVINE]: Carnivine
+  [Pkm.CARNIVINE]: Carnivine,
+  [Pkm.MANTYKE]: Mantyke,
+  [Pkm.MANTINE]: Mantine,
+  [Pkm.REMORAID]: Remoraid,
+  [Pkm.OCTILLERY]: Octillery
 }

@@ -487,6 +487,27 @@ export default class PokemonEntity extends Schema implements IPokemonEntity {
       this.effects.delete(Effect.TELEPORT_NEXT_ATTACK)
     }
 
+    if (this.effects.has(Effect.BOUNCE_NEXT_ATTACK)) {
+      this.status.removeProtect()
+      const crit =
+        this.items.has(Item.REAPER_CLOTH) && chance(this.critChance / 100)
+      if (crit) {
+        this.onCritical(target, board)
+      }
+      target.handleSpecialDamage(
+        [30, 60, 120][this.stars - 1],
+        board,
+        AttackType.SPECIAL,
+        this,
+        crit
+      )
+      target.status.triggerParalysis(
+        [3000, 5000, 8000][this.stars - 1],
+        target
+      )
+      this.effects.delete(Effect.BOUNCE_NEXT_ATTACK)
+    }
+
     if (this.passive === Passive.SHARED_VISION) {
       board.forEach((x: number, y: number, ally: PokemonEntity | undefined) => {
         if (

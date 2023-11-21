@@ -568,6 +568,11 @@ export default class Status extends Schema implements IStatus {
     }
   }
 
+  removeProtect() {
+    this.protect = false
+    this.protectCooldown = 0
+  }
+
   triggerSleep(timer: number, pkm: PokemonEntity) {
     if (
       !this.sleep &&

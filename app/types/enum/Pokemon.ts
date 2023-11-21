@@ -1986,7 +1986,7 @@ export const PkmFamily: { [key in Pkm]: Pkm } = {
   [Pkm.MANTYKE]: Pkm.MANTYKE,
   [Pkm.MANTINE]: Pkm.MANTYKE,
   [Pkm.REMORAID]: Pkm.REMORAID,
-  [Pkm.OCTILLERY]: Pkm.OCTILLERY
+  [Pkm.OCTILLERY]: Pkm.REMORAID
 }
 
 export enum PkmDuo {

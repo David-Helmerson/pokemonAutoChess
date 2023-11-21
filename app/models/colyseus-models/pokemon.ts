@@ -10697,6 +10697,7 @@ export class Mantyke extends Pokemon {
   maxPP = 100
   range = 1
   skill = Ability.BOUNCE
+  additional = true
   attackSprite = AttackSprite.WATER_MELEE
   passive = Passive.MANTYKE
 }
@@ -10712,6 +10713,7 @@ export class Mantine extends Pokemon {
   maxPP = 100
   range = 1
   skill = Ability.BOUNCE
+  additional = true
   attackSprite = AttackSprite.WATER_MELEE
   passive = Passive.MANTYKE
 }

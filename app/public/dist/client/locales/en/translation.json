@@ -1162,7 +1162,9 @@
     "SNIPE_SHOT": "Fires a shot of water from its index fingertips at the farthest opponent, dealing [50,100,200,SP] SPECIAL to all opponents in the way",
     "AIR_SLASH": "Deals [25,50,100,SP] SPECIAL and inflicts FLINCH for 7s",
     "EGGSPLOSION": "Launches an explosive egg at its target, inflicting [40,80,140,SP] SPECIAL and applying ARMOR_REDUCTION for 4 seconds to all adjacent enemies. If the target is killed, you have a 30% chance of getting an egg on your bench",
-    "VINE_WHIP": "Deals 100 SPECIAL, causing it and all adjacent enemies to FLINCH for 3s."
+    "VINE_WHIP": "Deals 100 SPECIAL, causing it and all adjacent enemies to FLINCH for 3s.",
+    "BOUNCE": "PROTECT the caster until their next attack, which deals [30,60,120,SP] SPECIAL and inflicts PARALYSIS for [3,5,8] seconds",
+    "OCTAZOOKA": "Deal [50,100,200,SP] SPECIAL and FLINCH the target for [3,5,8] seconds"
   
   },
   "effect": {
@@ -1605,7 +1607,8 @@
     "SAND_STREAM": "The pokémon count as 3 for SANDSTORM",
     "DRIZZLE": "The pokémon count as 3 for RAIN",
     "HARVEST": "At the start of the stage, equip itself with a random berry",
-    "COCONUT": "Exeggutor is looking for a LEAF_STONE"
+    "COCONUT": "Exeggutor is looking for a LEAF_STONE",
+    "MANTYKE": "Will not evolve unless Remoraid is present. 20% chance to catch a Remoraid when fishing"
   },
   "stat": {
     "ATK": "Attack",

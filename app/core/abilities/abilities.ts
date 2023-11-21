@@ -6375,6 +6375,39 @@ export class VineWhipStrategy extends AbilityStrategy {
   }
 }
 
+export class BounceStrategy extends AbilityStrategy {
+  process(
+    pokemon: PokemonEntity,
+    state: PokemonState,
+    board: Board,
+    target: PokemonEntity,
+    crit: boolean
+  ) {
+    super.process(pokemon, state, board, target, false) // crit is handled with BOUNCE_NEXT_ATTACK effect
+
+    // Protect for 5s (unreachable upper limit for protect)
+    pokemon.status.triggerProtect(5000)
+    pokemon.effects.add(Effect.BOUNCE_NEXT_ATTACK)
+
+  }
+}
+
+export class OctazookaStrategy extends AbilityStrategy {
+  process(
+    pokemon: PokemonEntity,
+    state: PokemonState,
+    board: Board,
+    target: PokemonEntity,
+    crit: boolean
+  ) {
+    super.process(pokemon, state, board, target, crit)
+    const damage = [50, 100, 200][pokemon.stars - 1]
+    target.status.triggerFlinch([3, 5, 8][pokemon.stars - 1])
+    target.handleSpecialDamage(damage, board, AttackType.SPECIAL, pokemon, crit)
+  }
+}
+
+
 export * from "./hidden-power"
 
 export const AbilityStrategies: { [key in Ability]: AbilityStrategy } = {
@@ -6621,5 +6654,7 @@ export const AbilityStrategies: { [key in Ability]: AbilityStrategy } = {
   [Ability.SNIPE_SHOT]: new SnipeShotStrategy(),
   [Ability.AIR_SLASH]: new AirSlashStrategy(),
   [Ability.EGGSPLOSION]: new EggsplosionStrategy(),
-  [Ability.VINE_WHIP]: new VineWhipStrategy()
+  [Ability.VINE_WHIP]: new VineWhipStrategy(),
+  [Ability.BOUNCE]: new BounceStrategy(),
+  [Ability.OCTAZOOKA]: new OctazookaStrategy()
 }

@@ -25,6 +25,7 @@ import { chance, pickNRandomIn, pickRandomIn } from "../utils/random"
 import { clamp } from "../utils/number"
 import { removeInArray } from "../utils/array"
 import { logger } from "../utils/logger"
+import { Passive } from "../types/enum/Passive"
 import { Synergy } from "../types/enum/Synergy"
 import { IPlayer } from "../types"
 import { Effect } from "../types/enum/Effect"
@@ -270,44 +271,51 @@ export default class Shop {
         .map((pokemon) => PkmFamily[pokemon.name])
     )
 
-    for (const rarity in rarityProbability) {
-      threshold += rarityProbability[rarity]
-      if (rarity_seed < threshold) {
-        switch (rarity) {
-          case Rarity.COMMON:
-            fish = this.getRandomPokemonFromPool(
-              this.commonPool,
-              finals,
-              Synergy.WATER
-            )
-            break
-          case Rarity.UNCOMMON:
-            fish = this.getRandomPokemonFromPool(
-              this.uncommonPool,
-              finals,
-              Synergy.WATER
-            )
-            break
-          case Rarity.RARE:
-            fish = this.getRandomPokemonFromPool(
-              this.rarePool,
-              finals,
-              Synergy.WATER
-            )
-            break
-          case Rarity.EPIC:
-            fish = this.getRandomPokemonFromPool(
-              this.epicPool,
-              finals,
-              Synergy.WATER
-            )
-            break
-          case Rarity.SPECIAL:
-          default:
-            fish = Pkm.MAGIKARP
-            break
+    if (values(player.board).some(pokemon => pokemon.passive === Passive.MANTYKE) && 
+        !finals.has(Pkm.REMORAID) && 
+        Math.random() < 0.2) {
+      fish = Pkm.REMORAID
+    } else {
+
+      for (const rarity in rarityProbability) {
+        threshold += rarityProbability[rarity]
+        if (rarity_seed < threshold) {
+          switch (rarity) {
+            case Rarity.COMMON:
+              fish = this.getRandomPokemonFromPool(
+                this.commonPool,
+                finals,
+                Synergy.WATER
+              )
+              break
+            case Rarity.UNCOMMON:
+              fish = this.getRandomPokemonFromPool(
+                this.uncommonPool,
+                finals,
+                Synergy.WATER
+              )
+              break
+            case Rarity.RARE:
+              fish = this.getRandomPokemonFromPool(
+                this.rarePool,
+                finals,
+                Synergy.WATER
+              )
+              break
+            case Rarity.EPIC:
+              fish = this.getRandomPokemonFromPool(
+                this.epicPool,
+                finals,
+                Synergy.WATER
+              )
+              break
+            case Rarity.SPECIAL:
+            default:
+              fish = Pkm.MAGIKARP
+              break
+          }
+          break
         }
-        break
       }
     }
 

@@ -1,5 +1,5 @@
 import { Pkm } from "../types/enum/Pokemon"
-import { Pokemon } from "../models/colyseus-models/pokemon"
+import { Pokemon, PrimalKyogre } from "../models/colyseus-models/pokemon"
 import Player from "../models/colyseus-models/player"
 import { values } from "../utils/schemas"
 import PokemonFactory from "../models/pokemon-factory"
@@ -7,6 +7,7 @@ import { BasicItems, Item } from "../types/enum/Item"
 import { EvolutionTime } from "../types/Config"
 import { PokemonActionState } from "../types/enum/Game"
 import { logger } from "../utils/logger"
+import { PkmWithConfig } from "../types"
 
 type DivergentEvolution = (
   pokemon: Pokemon,
@@ -245,4 +246,24 @@ export class TurnEvolutionRule extends EvolutionRule {
     )
     return pokemonEvolved
   }
+}
+
+export class PartnerRestrictedCountEvolutionRule extends CountEvolutionRule {
+  requiredPartner: string
+
+  constructor(numberRequired: number, requiredPartner: Pkm, divergentEvolution?: DivergentEvolution) {
+    super(numberRequired, divergentEvolution)
+    this.requiredPartner = requiredPartner
+  }
+
+  canEvolve(pokemon: Pokemon, player: Player, stageLevel: number): boolean {
+    return super.canEvolve(pokemon, player, stageLevel) && 
+           (values(player.board).some((pkm) => pkm.name === this.requiredPartner))
+  }
+
+  canEvolveIfBuyingOne(pokemon: Pokemon, player: Player): boolean {
+    return super.canEvolveIfBuyingOne(pokemon, player) && 
+           (values(player.board).some((pkm) => pkm.name === this.requiredPartner))
+  }
+
 }

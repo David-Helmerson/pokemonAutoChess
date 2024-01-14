@@ -286,46 +286,33 @@ export class Riolu extends Pokemon {
     Synergy.STEEL,
     Synergy.BABY
   ])
-  rarity = Rarity.ULTRA
+  rarity = Rarity.RARE
   stars = 1
   evolution = Pkm.LUCARIO
-  hp = 120
-  atk = 10
-  def = 3
-  speDef = 3
-  maxPP = 100
+  hp = 65
+  atk = 7
+  def = 2
+  speDef = 2
+  maxPP = 80
   range = 2
-  skill = Ability.SILENCE
+  skill = Ability.AURASPHERE
   attackSprite = AttackSprite.FIGHTING_RANGE
+  additional = true
 }
 
 export class Lucario extends Pokemon {
   types = new SetSchema<Synergy>([Synergy.FIGHTING, Synergy.STEEL])
-  rarity = Rarity.ULTRA
+  rarity = Rarity.RARE
   stars = 2
-  evolution = Pkm.MEGA_LUCARIO
-  hp = 240
+  hp = 170
   atk = 20
-  def = 5
-  speDef = 5
-  maxPP = 100
+  def = 4
+  speDef = 4
+  maxPP = 80
   range = 2
-  skill = Ability.SILENCE
+  skill = Ability.AURASPHERE
   attackSprite = AttackSprite.FIGHTING_RANGE
-}
-
-export class MegaLucario extends Pokemon {
-  types = new SetSchema<Synergy>([Synergy.FIGHTING, Synergy.STEEL])
-  rarity = Rarity.ULTRA
-  stars = 3
-  hp = 360
-  atk = 42
-  def = 7
-  speDef = 7
-  maxPP = 100
-  range = 2
-  skill = Ability.SILENCE
-  attackSprite = AttackSprite.FIGHTING_RANGE
+  additional = true
 }
 
 export class Swablu extends Pokemon {
@@ -505,11 +492,11 @@ export class MegaLopunny extends Pokemon {
 }
 
 export class Onix extends Pokemon {
-  types = new SetSchema<Synergy>([Synergy.ROCK, Synergy.GROUND, Synergy.STEEL])
+  types = new SetSchema<Synergy>([Synergy.ROCK, Synergy.GROUND])
   rarity = Rarity.ULTRA
   stars = 1
   evolution = Pkm.STEELIX
-  hp = 150
+  hp = 200
   atk = 9
   def = 10
   speDef = 5
@@ -10943,7 +10930,7 @@ export class Gholdengo extends Pokemon {
 }
 
 export class Sobble extends Pokemon {
-  types = new SetSchema<Synergy>([Synergy.GHOST, Synergy.STEEL])
+  types = new SetSchema<Synergy>([Synergy.WATER, Synergy.AQUATIC])
   rarity = Rarity.ULTRA
   evolution = Pkm.DRIZZILE
   stars = 1
@@ -11157,6 +11144,7 @@ export class Corsola extends Pokemon {
   passive = Passive.CORSOLA
   evolution = Pkm.GALAR_CORSOLA
   evolutionRule = new TurnEvolutionRule(99) // natural death
+  additional = true
 }
 
 export class GalarCorsola extends Pokemon {
@@ -11172,6 +11160,7 @@ export class GalarCorsola extends Pokemon {
   range = 1
   skill = Ability.CURSE
   attackSprite = AttackSprite.WATER_MELEE
+  additional = true
 }
 
 export class Cursola extends Pokemon {
@@ -11186,6 +11175,7 @@ export class Cursola extends Pokemon {
   range = 1
   skill = Ability.CURSE
   attackSprite = AttackSprite.WATER_MELEE
+  additional = true
 }
 
 export const PokemonClasses: Record<
@@ -11359,7 +11349,6 @@ export const PokemonClasses: Record<
   [Pkm.MEGA_SCIZOR]: MegaScizor,
   [Pkm.RIOLU]: Riolu,
   [Pkm.LUCARIO]: Lucario,
-  [Pkm.MEGA_LUCARIO]: MegaLucario,
   [Pkm.MAGIKARP]: Magikarp,
   [Pkm.RATTATA]: Rattata,
   [Pkm.RATICATE]: Raticate,

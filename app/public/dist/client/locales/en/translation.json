@@ -43,7 +43,6 @@
     "BURN": "Burn",
     "POISON": "Poison",
     "SLEEP": "Sleep",
-    "SILENCE": "Silence",
     "PROTECT": "Protect",
     "BLIZZARD": "Blizzard",
     "CONFUSION": "Confusion",
@@ -277,7 +276,8 @@
     "POLTERGEIST": "Poltergeist",
     "GOLD_RUSH": "Gold Rush",
     "MAKE_IT_RAIN": "Make it Rain",
-    "CRUSH_GRIP": "Crush Grip"
+    "CRUSH_GRIP": "Crush Grip",
+    "AURASPHERE": "Aura Sphere"
   },
   "pkm": {
     "DEFAULT": "MissingNo.",
@@ -446,7 +446,6 @@
     "MEGA_SCIZOR": "Mega Scizor",
     "RIOLU": "Riolu",
     "LUCARIO": "Lucario",
-    "MEGA_LUCARIO": "Mega Lucario",
     "MAGIKARP": "Magikarp",
     "RATTATA": "Rattata",
     "RATICATE": "Raticate",
@@ -962,9 +961,9 @@
     "SONG_OF_DESIRE": "Make 2 opponents in the backline CHARM for [3,SP] seconds",
     "CONFUSING_MIND": "Make 2 opponents in the backline CONFUSION for [3,SP] seconds",
     "KNOWLEDGE_THIEF": "Use the target's ability",
-    "KING_SHIELD": "PROTECT the user for 1.5 seconds, gain [10,20,30,SP] SHIELD, and swap positions with the farthest enemy Pokémon",
-    "EXPLOSION": "Deal [50,100,200,SP] SPECIAL to all adjacent enemies. Damages the user!",
-    "NIGHTMARE": "POISON all enemy Pokémon for [2,4,8,SP=0.5] seconds. Any SLEEP or FLINCH opponent take [50,SP] SPECIAL.",
+    "KING_SHIELD": "PROTECT the user for 1.5 seconds, gain [10,20,30,SP] SHIELD and swap positions with the farthest enemy Pokémon",
+    "EXPLOSION": "Deal [50,100,200,SP] SPECIAL to all adjacent enemies. Damages the user",
+    "NIGHTMARE": "SILENCE all enemy Pokémon for [1.5,3,8,SP=0.5] seconds. Any SLEEP, FLINCH or already SILENCE opponent take [50,SP] SPECIAL.",
     "CLANGOROUS_SOUL": "Buff adjacent allied Pokémon's ATK by [2,4,8] and DEF / SPE_DEF by [1,2,4]",
     "BONEMERANG": "Throw a bone like a boomerang through the enemy team, dealing [30,60,90,SP] SPECIAL to every enemy Pokémon it hits",
     "GROWL": "FLINCH all enemy Pokémon for [3,6,9,SP] seconds",
@@ -983,7 +982,6 @@
     "BURN": "BURN all enemy Pokémon for [5,10,20] seconds",
     "POISON": "Apply POISONED to the [1,2,3] closest enemy Pokémon for [3,6,9,SP=0.5] seconds",
     "SLEEP": "Make [1,2,3] enemy Pokémon in the backline SLEEP for [2,SP] seconds",
-    "SILENCE": "SILENCE all enemy Pokémon for [2,4,8] seconds",
     "PROTECT": "PROTECT the user, becoming invulnerable for [5,SP=0.5] seconds",
     "BLIZZARD": "FREEZE all enemy Pokémon for [1,2,3] seconds and deal [5,10,15,SP] SPECIAL. Double damage if enemy is already FREEZE",
     "CONFUSION": "Make the target CONFUSION for [3,5,7] seconds. If the target is already CONFUSION, deal [75,150,300,SP] SPECIAL instead",
@@ -1217,7 +1215,8 @@
     "POLTERGEIST": "Deals [30,60,120,SP] SPECIAL + [20,SP] SPECIAL ([40,SP] if item is ARTIFICIAL) for each item held by the target.",
     "GOLD_RUSH": "Deals  [20,SP] + your amount of golds as SPECIAL, then earn 2 golds",
     "MAKE_IT_RAIN": "Deals [100,SP] + your amount of golds as SPECIAL",
-    "CRUSH_GRIP": "The target is crushed with great force. The more HP the target has left, the greater the damage: between [20,SP] and [200,SP] PHYSICAL."
+    "CRUSH_GRIP": "The target is crushed with great force. The more HP the target has left, the greater the damage: between [20,SP] and [200,SP] PHYSICAL.",
+    "AURASPHERE": "Exudes an aura and projects energy in a line, dealing [25,50,SP] SPECIAL and SILENCE every opponent hit for 3 seconds"
   },
   "effect": {
     "INGRAIN": "Ingrain",
@@ -1436,11 +1435,11 @@
     "WINDY": "+10% dodge chance (+20% if FLYING)",
     "NIGHT": "+20% CRIT_CHANCE\n+30% SLEEP duration",
     "HYDRATATION": "GRASS synergy is healing 5 additional HP per second under the RAIN",
-    "POISON_GAS": "Inflicts POISONED every second",
-    "SHINING_RAY": "Give RUNE_PROTECT for 6s",
+    "POISON_GAS": "Inflicts POISONNED every second",
+    "SHINING_RAY": "Increase AP and ATK by 30%",
     "LIGHT_PULSE": "Also give +10 PP per second",
-    "ETERNAL_LIGHT": "Also increase AP and ATK by 30%",
-    "MAX_ILLUMINATION": "Also give RESURECTION"
+    "ETERNAL_LIGHT": "Also give 30% ATK_SPEED and RUNE_PROTECT for 10 seconds",
+    "MAX_ILLUMINATION": "Also give 100 SHIELD and RESURECTION"
   },
   "item": {
     "FOSSIL_STONE": "Fossil Stone",
@@ -1699,7 +1698,7 @@
     "CORSOLA": "$t(pkm.CORSOLA) evolves into $t(pkm.GALAR_CORSOLA) after being KO once",
     "CELEBI": "The player regains 1 HP every time $t(pkm.CELEBI) casts $t(ability.TIME_TRAVEL).",
     "GIMMIGHOUL": "$t(pkm.GIMMIGHOUL) is looking for 99 golds",
-    "GHOLDENGO": "At the start of each fight, if the player has more than 50 golds, $t(pkm.GHOLDENGO) gains RUNE_PROTECT for the entire fight"
+    "GHOLDENGO": "At the start of each fight, if the player has 50 GOLD or more, $t(pkm.GHOLDENGO) gains RUNE_PROTECT for the entire fight"
   },
   "stat": {
     "ATK": "Attack",
@@ -2521,5 +2520,6 @@
   },
   "lobby_full": "Lobby is full",
   "game_already_started": "Game has already started",
-  "min_rank_not_reached": "Your rank is not high enough to play this ranked match"
+  "min_rank_not_reached": "Your rank is not high enough to play this ranked match",
+  "ranked_match": "Ranked Match"
 }

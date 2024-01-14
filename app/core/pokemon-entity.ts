@@ -236,6 +236,21 @@ export class PokemonEntity extends Schema implements IPokemonEntity {
   ): { death: boolean; takenDamage: number } {
     if (this.status.protect || this.status.magicBounce) {
       this.count.spellBlockedCount++
+      if (
+        this.status.magicBounce &&
+        attackType === AttackType.SPECIAL &&
+        damage > 0
+      ) {
+        const damage = 40
+        // not handleSpecialDamage to not trigger infinite loop between two magic bounces
+        attacker?.handleDamage({
+          damage,
+          board,
+          attackType: AttackType.SPECIAL,
+          attacker: this,
+          shouldTargetGainMana: true
+        })
+      }
       return { death: false, takenDamage: 0 }
     } else {
       let specialDamage =
@@ -1030,6 +1045,7 @@ export class PokemonEntity extends Schema implements IPokemonEntity {
       } else if (isAngerPoint) {
         speedBoost = 30
       }
+      // eslint-disable-next-line @typescript-eslint/no-this-alias
       const _pokemon = this // beware of closure vars
       this.simulation.room.clock.setTimeout(() => {
         board.forEach((x, y, value) => {
@@ -1057,28 +1073,6 @@ export class PokemonEntity extends Schema implements IPokemonEntity {
         this.player!,
         this.simulation.stageLevel
       )
-    }
-  }
-
-  // called after every ability cast
-  onCast(board: Board, target: PokemonEntity, crit: boolean, player: Player) {
-    if (this.items.has(Item.LEPPA_BERRY)) {
-      this.eatBerry(Item.LEPPA_BERRY)
-    }
-
-    if (this.items.has(Item.COMFEY)) {
-      AbilityStrategies[Ability.FLORAL_HEALING].process(
-        this,
-        this.state,
-        board,
-        target,
-        false,
-        true
-      )
-    }
-
-    if (this.passive === Passive.CELEBI) {
-      player.life = max(100)(player.life + 1)
     }
   }
 
@@ -1255,7 +1249,7 @@ export class PokemonEntity extends Schema implements IPokemonEntity {
     if (this.passive === Passive.GLUTTON) {
       this.refToBoardPokemon.hp += 20
       if (this.refToBoardPokemon.hp > 750) {
-        this.player.titles.add(Title.GLUTTON)
+        this.player?.titles.add(Title.GLUTTON)
       }
     }
   }

@@ -180,6 +180,11 @@ export function loadAttacksMultiAtlas(scene: Phaser.Scene) {
     "/assets/attacks"
   )
   scene.load.multiatlas(
+    "STEEL/melee",
+    "/assets/attacks/STEEL_MELEE.json",
+    "/assets/attacks"
+  )
+  scene.load.multiatlas(
     "ROAR_OF_TIME",
     "/assets/attacks/ROAR_OF_TIME.json",
     "/assets/attacks"
@@ -207,6 +212,11 @@ export function loadAttacksMultiAtlas(scene: Phaser.Scene) {
   scene.load.multiatlas(
     "APPLE_ACID",
     "/assets/attacks/APPLE_ACID.json",
+    "/assets/attacks"
+  )
+  scene.load.multiatlas(
+    "PSYCHIC_FANGS",
+    "/assets/attacks/PSYCHIC_FANGS.json",
     "/assets/attacks"
   )
   scene.load.multiatlas(
@@ -377,6 +387,11 @@ export function loadAttacksMultiAtlas(scene: Phaser.Scene) {
   scene.load.multiatlas(
     "PSYCHIC",
     "/assets/attacks/PSYCHIC.json",
+    "/assets/attacks"
+  )
+  scene.load.multiatlas(
+    "PSYBEAM",
+    "/assets/attacks/PSYBEAM.json",
     "/assets/attacks"
   )
   scene.load.multiatlas(
@@ -834,6 +849,16 @@ export function loadAttacksMultiAtlas(scene: Phaser.Scene) {
     "AURASPHERE",
     "/assets/attacks/AURASPHERE.json",
     "/assets/attacks"
+  )
+  scene.load.multiatlas(
+    "OVERDRIVE",
+    "/assets/attacks/OVERDRIVE/OVERDRIVE.json",
+    "/assets/attacks/OVERDRIVE"
+  )
+  scene.load.multiatlas(
+    "NIGHT_SLASH",
+    "/assets/attacks/NIGHT_SLASH/NIGHT_SLASH.json",
+    "/assets/attacks/NIGHT_SLASH"
   )
 }
 

@@ -674,7 +674,16 @@ export enum Pkm {
   GIMMIGHOUL = "GIMMIGHOUL",
   GHOLDENGO = "GHOLDENGO",
   PHANTUMP = "PHANTUMP",
-  TREVENANT = "TREVENANT"
+  TREVENANT = "TREVENANT",
+  SMEARGLE = "SMEARGLE",
+  TOXEL = "TOXEL",
+  TOXTRICITY = "TOXTRICITY",
+  BRUXISH = "BRUXISH",
+  SUBSTITUTE = "SUBSTITUTE",
+  CYCLIZAR = "CYCLIZAR",
+  PAWNIARD = "PAWNIARD",
+  BISHARP = "BISHARP",
+  KINGAMBIT = "KINGAMBIT"
 }
 
 export const PkmIndex: { [key in Pkm]: string } = {
@@ -1351,7 +1360,16 @@ export const PkmIndex: { [key in Pkm]: string } = {
   [Pkm.GIMMIGHOUL]: "0999-0001",
   [Pkm.GHOLDENGO]: "1000",
   [Pkm.PHANTUMP]: "0708",
-  [Pkm.TREVENANT]: "0709"
+  [Pkm.TREVENANT]: "0709",
+  [Pkm.SMEARGLE]: "0235",
+  [Pkm.TOXEL]: "0848",
+  [Pkm.TOXTRICITY]: "0849",
+  [Pkm.BRUXISH]: "0779",
+  [Pkm.SUBSTITUTE]: "0000-0001",
+  [Pkm.CYCLIZAR]: "0967",
+  [Pkm.PAWNIARD]: "0624",
+  [Pkm.BISHARP]: "0625",
+  [Pkm.KINGAMBIT]: "0983"
 }
 
 export const PkmFamily: { [key in Pkm]: Pkm } = {
@@ -2028,7 +2046,16 @@ export const PkmFamily: { [key in Pkm]: Pkm } = {
   [Pkm.GIMMIGHOUL]: Pkm.GIMMIGHOUL,
   [Pkm.GHOLDENGO]: Pkm.GIMMIGHOUL,
   [Pkm.PHANTUMP]: Pkm.PHANTUMP,
-  [Pkm.TREVENANT]: Pkm.PHANTUMP
+  [Pkm.TREVENANT]: Pkm.PHANTUMP,
+  [Pkm.SMEARGLE]: Pkm.SMEARGLE,
+  [Pkm.TOXEL]: Pkm.TOXEL,
+  [Pkm.TOXTRICITY]: Pkm.TOXTRICITY,
+  [Pkm.BRUXISH]: Pkm.BRUXISH,
+  [Pkm.SUBSTITUTE]: Pkm.SUBSTITUTE,
+  [Pkm.CYCLIZAR]: Pkm.CYCLIZAR,
+  [Pkm.PAWNIARD]: Pkm.PAWNIARD,
+  [Pkm.BISHARP]: Pkm.PAWNIARD,
+  [Pkm.KINGAMBIT]: Pkm.PAWNIARD
 }
 
 export enum PkmDuo {
@@ -2170,7 +2197,7 @@ export const AnimationConfig: {
   },
   [Pkm.DITTO]: {
     attack: AnimationType.Attack,
-    ability: AnimationType.Attack,
+    ability: AnimationType.Charge,
     emote: AnimationType.Hop
   },
   [Pkm.BULBASAUR]: {
@@ -4122,13 +4149,13 @@ export const AnimationConfig: {
     emote: AnimationType.Shoot
   },
   [Pkm.SMOOCHUM]: {
-    attack: AnimationType.Shoot,
-    ability: AnimationType.Twirl,
-    emote: AnimationType.Shoot
+    attack: AnimationType.Attack,
+    ability: AnimationType.Shoot,
+    emote: AnimationType.Twirl
   },
   [Pkm.JYNX]: {
-    attack: AnimationType.Shoot,
-    ability: AnimationType.Slap,
+    attack: AnimationType.Slap,
+    ability: AnimationType.Shoot,
     emote: AnimationType.Shoot
   },
   [Pkm.SALANDIT]: {
@@ -5114,7 +5141,7 @@ export const AnimationConfig: {
   },
   [Pkm.KARTANA]: {
     attack: AnimationType.Attack,
-    ability: AnimationType.Charge,
+    ability: AnimationType.Attack,
     emote: AnimationType.Shoot
   },
   [Pkm.CHINGLING]: {
@@ -5533,5 +5560,51 @@ export const AnimationConfig: {
     attack: AnimationType.Punch,
     ability: AnimationType.Swing,
     emote: AnimationType.Charge
+  },
+  [Pkm.SMEARGLE]: {
+    attack: AnimationType.SpAttack,
+    ability: AnimationType.Shoot,
+    emote: AnimationType.Pose
+  },
+  [Pkm.TOXEL]: {
+    attack: AnimationType.Attack,
+    ability: AnimationType.Shoot,
+    emote: AnimationType.Shoot
+  },
+  [Pkm.TOXTRICITY]: {
+    attack: AnimationType.Attack,
+    ability: AnimationType.Shock,
+    emote: AnimationType.Shoot
+  },
+  [Pkm.BRUXISH]: {
+    attack: AnimationType.Bite,
+    ability: AnimationType.Shoot,
+    emote: AnimationType.Charge
+  },
+  [Pkm.SUBSTITUTE]: {
+    attack: AnimationType.Attack,
+    ability: AnimationType.Charge,
+    emote: AnimationType.Charge,
+    shinyUnavailable: true
+  },
+  [Pkm.CYCLIZAR]: {
+    attack: AnimationType.Attack,
+    ability: AnimationType.Shoot,
+    emote: AnimationType.Charge
+  },
+  [Pkm.PAWNIARD]: {
+    attack: AnimationType.Strike,
+    ability: AnimationType.Attack,
+    emote: AnimationType.Appeal
+  },
+  [Pkm.BISHARP]: {
+    attack: AnimationType.Strike,
+    ability: AnimationType.Attack,
+    emote: AnimationType.Pose
+  },
+  [Pkm.KINGAMBIT]: {
+    attack: AnimationType.Attack,
+    ability: AnimationType.Attack,
+    emote: AnimationType.Shoot
   }
 }

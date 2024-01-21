@@ -535,7 +535,7 @@ export class GrassySurgeStrategy extends AbilityStrategy {
   }
 }
 
-export class ShadowBallStrategy extends AbilityStrategy {
+export class PsychicStrategy extends AbilityStrategy {
   process(
     pokemon: PokemonEntity,
     state: PokemonState,
@@ -575,8 +575,8 @@ export class ChatterStrategy extends AbilityStrategy {
     crit: boolean
   ) {
     super.process(pokemon, state, board, target, crit)
-    const damage = 10
-    const confusionChance = max(1)(0.3 * (1 + pokemon.ap / 100))
+    const damage = 20
+    const confusionChance = 0.5
     board.forEach((x: number, y: number, tg: PokemonEntity | undefined) => {
       if (tg && pokemon.team != tg.team) {
         tg.handleSpecialDamage(damage, board, AttackType.SPECIAL, pokemon, crit)
@@ -2239,6 +2239,7 @@ export class ConfusionStrategy extends AbilityStrategy {
         crit
       )
     } else {
+      target.status.triggerSilence(timer, target)
       target.status.triggerConfusion(timer, target)
     }
   }
@@ -2857,7 +2858,7 @@ export class ChargeStrategy extends AbilityStrategy {
     crit: boolean
   ) {
     super.process(pokemon, state, board, target, crit)
-    const buff = 0.3
+    const buff = 0.25
     board.forEach((x: number, y: number, ally: PokemonEntity | undefined) => {
       if (
         ally &&
@@ -3084,7 +3085,7 @@ export class AppleAcidStrategy extends AbilityStrategy {
   }
 }
 
-export class PsychicStrategy extends AbilityStrategy {
+export class PsybeamStrategy extends AbilityStrategy {
   process(
     pokemon: PokemonEntity,
     state: PokemonState,
@@ -3093,9 +3094,22 @@ export class PsychicStrategy extends AbilityStrategy {
     crit: boolean
   ) {
     super.process(pokemon, state, board, target, crit)
-    const damage = pokemon.stars === 3 ? 120 : pokemon.stars === 2 ? 80 : 40
-    target.addSpecialDefense(pokemon.stars, true)
-    target.handleSpecialDamage(damage, board, AttackType.SPECIAL, pokemon, crit)
+    const damage = [25, 50, 100][pokemon.stars - 1] ?? 25
+
+    effectInLine(board, pokemon, target, (targetInLine) => {
+      if (targetInLine != null && targetInLine.team !== pokemon.team) {
+        targetInLine.handleSpecialDamage(
+          damage,
+          board,
+          AttackType.SPECIAL,
+          pokemon,
+          crit
+        )
+        if (chance(0.5)) {
+          targetInLine.status.triggerConfusion(4000, targetInLine)
+        }
+      }
+    })
   }
 }
 
@@ -3150,7 +3164,14 @@ export class LeafBladeStrategy extends AbilityStrategy {
   ) {
     super.process(pokemon, state, board, target, true)
     const damage = Math.round(pokemon.atk * (1 + pokemon.ap / 100))
-    target.handleSpecialDamage(damage, board, AttackType.SPECIAL, pokemon, true)
+    target.handleSpecialDamage(
+      damage,
+      board,
+      AttackType.TRUE,
+      pokemon,
+      true,
+      false
+    )
   }
 }
 
@@ -3419,7 +3440,7 @@ export class PaybackStrategy extends AbilityStrategy {
   }
 }
 
-export class NightSlashStrategy extends AbilityStrategy {
+export class ShadowBallStrategy extends AbilityStrategy {
   process(
     pokemon: PokemonEntity,
     state: PokemonState,
@@ -3440,7 +3461,7 @@ export class NightSlashStrategy extends AbilityStrategy {
 
     board.forEach((x: number, y: number, v: PokemonEntity | undefined) => {
       if (v && pokemon.team != v.team) {
-        v.addDefense(-1, true)
+        v.addSpecialDefense(-1, true)
       }
     })
   }
@@ -3873,20 +3894,7 @@ export class HurricaneStrategy extends AbilityStrategy {
     crit: boolean
   ) {
     super.process(pokemon, state, board, target, crit)
-    let damage = 0
-    switch (pokemon.stars) {
-      case 1:
-        damage = 25
-        break
-      case 2:
-        damage = 50
-        break
-      case 3:
-        damage = 100
-        break
-      default:
-        break
-    }
+    const damage = [25, 50, 100][pokemon.stars - 1] ?? 25
 
     effectInLine(board, pokemon, target, (targetInLine) => {
       if (targetInLine != null && targetInLine.team !== pokemon.team) {
@@ -3912,20 +3920,7 @@ export class FakeTearsStrategy extends AbilityStrategy {
     crit: boolean
   ) {
     super.process(pokemon, state, board, target, crit)
-    let damage = 0
-    switch (pokemon.stars) {
-      case 1:
-        damage = 3
-        break
-      case 2:
-        damage = 6
-        break
-      case 3:
-        damage = 9
-        break
-      default:
-        break
-    }
+    const damage = [3, 6, 9][pokemon.stars - 1] ?? 3
 
     board.forEach((x: number, y: number, value: PokemonEntity | undefined) => {
       if (value && pokemon.team != value.team) {
@@ -3991,21 +3986,7 @@ export class DragonDartsStrategy extends AbilityStrategy {
     crit: boolean
   ) {
     super.process(pokemon, state, board, target, crit)
-    let damage = 0
-
-    switch (pokemon.stars) {
-      case 1:
-        damage = 10
-        break
-      case 2:
-        damage = 25
-        break
-      case 3:
-        damage = 50
-        break
-      default:
-        break
-    }
+    const damage = [10, 20, 40][pokemon.stars - 1] ?? 10
 
     for (let n = 0; n < 3; n++) {
       target.handleSpecialDamage(
@@ -5155,9 +5136,7 @@ export class MagicBounceStrategy extends AbilityStrategy {
     crit: boolean
   ) {
     super.process(pokemon, state, board, target, crit)
-    const timer =
-      pokemon.stars === 3 ? 12000 : pokemon.stars === 2 ? 6000 : 3000
-    pokemon.status.triggerMagicBounce(timer)
+    pokemon.status.triggerMagicBounce(5000)
   }
 }
 
@@ -6812,6 +6791,211 @@ export class AuraSphereStrategy extends AbilityStrategy {
   }
 }
 
+export class SketchStrategy extends AbilityStrategy {
+  process(
+    pokemon: PokemonEntity,
+    state: PokemonState,
+    board: Board,
+    target: PokemonEntity,
+    crit: boolean
+  ) {
+    super.process(pokemon, state, board, target, crit)
+  }
+}
+
+export class LovelyKissStrategy extends AbilityStrategy {
+  process(
+    pokemon: PokemonEntity,
+    state: PokemonState,
+    board: Board,
+    target: PokemonEntity,
+    crit: boolean
+  ) {
+    super.process(pokemon, state, board, target, crit)
+    const duration = Math.round(
+      ([2000, 4000][pokemon.stars - 1] ?? 2000) * (1 + pokemon.ap / 100)
+    )
+    target.status.triggerSleep(duration, target)
+  }
+}
+
+export class OverdriveStrategy extends AbilityStrategy {
+  process(
+    pokemon: PokemonEntity,
+    state: PokemonState,
+    board: Board,
+    target: PokemonEntity,
+    crit: boolean
+  ) {
+    super.process(pokemon, state, board, target, crit)
+    const cells = board.getCellsInRadius(target.positionX, target.positionY, 3)
+    cells.forEach((cell) => {
+      if (cell && cell.value && cell.value.team !== pokemon.team) {
+        const distance = distanceC(
+          cell.x,
+          cell.y,
+          pokemon.positionX,
+          pokemon.positionY
+        )
+        const damage = pokemon.atk * (1.2 - 0.2 * (distance - 1))
+        cell.value.handleSpecialDamage(
+          damage,
+          board,
+          AttackType.SPECIAL,
+          pokemon,
+          crit,
+          true
+        )
+      }
+    })
+  }
+}
+
+export class TransformStrategy extends AbilityStrategy {
+  process(
+    pokemon: PokemonEntity,
+    state: PokemonState,
+    board: Board,
+    target: PokemonEntity,
+    crit: boolean
+  ) {
+    super.process(pokemon, state, board, target, crit)
+    if (target) {
+      pokemon.index = target.index
+      pokemon.rarity = target.rarity
+      pokemon.stars = target.stars
+      pokemon.skill = target.skill
+      pokemon.passive = target.passive
+      pokemon.baseAtk = target.atk
+      pokemon.baseDef = target.def
+      pokemon.baseSpeDef = target.speDef
+      pokemon.baseRange = target.baseRange
+      pokemon.atk = target.atk
+      pokemon.atkSpeed = target.atkSpeed
+      pokemon.def = target.def
+      pokemon.speDef = target.speDef
+      pokemon.attackType = target.attackType
+      pokemon.ap = target.ap
+      pokemon.hp = target.hp
+      pokemon.maxPP = target.maxPP
+      pokemon.atkSpeed = target.atkSpeed
+      pokemon.critChance = target.critChance
+      pokemon.critDamage = target.critDamage
+      pokemon.range = target.range
+      pokemon.attackSprite = target.attackSprite
+      pokemon.shiny = target.shiny
+      pokemon.emotion = target.emotion
+      pokemon.dodge = target.dodge
+    }
+  }
+}
+
+export class PsychicFangsStrategy extends AbilityStrategy {
+  process(
+    pokemon: PokemonEntity,
+    state: PokemonState,
+    board: Board,
+    target: PokemonEntity,
+    crit: boolean
+  ) {
+    super.process(pokemon, state, board, target, crit)
+    target.handleSpecialDamage(
+      100,
+      board,
+      AttackType.PHYSICAL,
+      pokemon,
+      crit,
+      true
+    )
+    target.atk = target.baseAtk
+    target.def = target.baseDef
+    target.speDef = target.baseSpeDef
+  }
+}
+
+export class ShedTailStrategy extends AbilityStrategy {
+  process(
+    pokemon: PokemonEntity,
+    state: PokemonState,
+    board: Board,
+    target: PokemonEntity,
+    crit: boolean
+  ) {
+    super.process(pokemon, state, board, target, crit)
+    const x = pokemon.positionX
+    const y = pokemon.positionY
+    const lowestHealthAlly = (
+      board.cells.filter(
+        (cell) => cell && cell.team === pokemon.team
+      ) as PokemonEntity[]
+    ).sort((a, b) => a.life / a.hp - b.life / b.hp)[0]
+
+    if (lowestHealthAlly) {
+      lowestHealthAlly.addShield(80, pokemon, true)
+      const substitute = PokemonFactory.createPokemonFromName(
+        Pkm.SUBSTITUTE,
+        pokemon.player
+      )
+      const coord = pokemon.simulation.getClosestAvailablePlaceOnBoardToPokemon(
+        lowestHealthAlly,
+        lowestHealthAlly.team
+      )
+      pokemon.moveTo(coord.x, coord.y, board)
+      pokemon.simulation.addPokemon(substitute, x, y, pokemon.team, true)
+    }
+  }
+}
+
+export class NightSlashStrategy extends AbilityStrategy {
+  process(
+    pokemon: PokemonEntity,
+    state: PokemonState,
+    board: Board,
+    target: PokemonEntity,
+    crit: boolean
+  ) {
+    super.process(pokemon, state, board, target, crit)
+    const damage = [15,30,60][pokemon.stars-1] ?? 60
+    crit = crit || chance([0.3,0.6,0.9][pokemon.stars-1] ?? 0.9)
+    target.handleSpecialDamage(
+      damage,
+      board,
+      AttackType.SPECIAL,
+      pokemon,
+      crit
+    )
+  }
+}
+
+export class KowtowCleaveStrategy extends AbilityStrategy {
+  process(
+    pokemon: PokemonEntity,
+    state: PokemonState,
+    board: Board,
+    target: PokemonEntity,
+    crit: boolean
+  ) {
+    crit = chance(pokemon.critChance / 100) // can crit by default
+    super.process(pokemon, state, board, target, crit)
+    const nbAllies =
+      board.cells.filter((p) => p && p.team === pokemon.team).length - 1
+    const nbFallenAllies = min(0)(
+      (pokemon.player?.experienceManager.level ?? 0) - nbAllies
+    )
+    const damage = Math.round(
+      pokemon.atk * (1 + nbFallenAllies * 0.1 * (1 + pokemon.ap / 100))
+    )
+    target.handleSpecialDamage(
+      damage,
+      board,
+      AttackType.TRUE,
+      pokemon,
+      crit,
+      false
+    )
+  }
+}
+
 export * from "./hidden-power"
 
 export const AbilityStrategies: { [key in Ability]: AbilityStrategy } = {
@@ -6867,6 +7051,7 @@ export const AbilityStrategies: { [key in Ability]: AbilityStrategy } = {
   [Ability.STOMP]: new StompStrategy(),
   [Ability.PAYBACK]: new PaybackStrategy(),
   [Ability.NIGHT_SLASH]: new NightSlashStrategy(),
+  [Ability.KOWTOW_CLEAVE]: new KowtowCleaveStrategy(),
   [Ability.BUG_BUZZ]: new BugBuzzStrategy(),
   [Ability.STRING_SHOT]: new StringShotStrategy(),
   [Ability.STICKY_WEB]: new StickyWebStrategy(),
@@ -7024,6 +7209,7 @@ export const AbilityStrategies: { [key in Ability]: AbilityStrategy } = {
   [Ability.ANCHOR_SHOT]: new AnchorShotStrategy(),
   [Ability.SMOG]: new SmogStrategy(),
   [Ability.PSYCHIC]: new PsychicStrategy(),
+  [Ability.PSYBEAM]: new PsybeamStrategy(),
   [Ability.MAGNET_RISE]: new MagnetRiseStrategy(),
   [Ability.ATTRACT]: new AttractStrategy(),
   [Ability.WATER_PULSE]: new WaterPulseStrategy(),
@@ -7076,5 +7262,11 @@ export const AbilityStrategies: { [key in Ability]: AbilityStrategy } = {
   [Ability.TIME_TRAVEL]: new TimeTravelStrategy(),
   [Ability.POLTERGEIST]: new PoltergeistStrategy(),
   [Ability.CRUSH_GRIP]: new CrushGripStrategy(),
-  [Ability.AURASPHERE]: new AuraSphereStrategy()
+  [Ability.AURASPHERE]: new AuraSphereStrategy(),
+  [Ability.SKETCH]: new SketchStrategy(),
+  [Ability.OVERDRIVE]: new OverdriveStrategy(),
+  [Ability.LOVELY_KISS]: new LovelyKissStrategy(),
+  [Ability.TRANSFORM]: new TransformStrategy(),
+  [Ability.PSYCHIC_FANGS]: new PsychicFangsStrategy(),
+  [Ability.SHED_TAIL]: new ShedTailStrategy()
 }

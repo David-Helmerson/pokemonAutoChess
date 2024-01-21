@@ -170,7 +170,7 @@ export class DebugScene extends Phaser.Scene {
       this.pokemon.removeGrassField()
       this.pokemon.removeFairyField()
 
-      if (status === Status.POISONED) {
+      if (status === Status.POISONNED) {
         this.pokemon.addPoison()
       }
       if (status === Status.SLEEP) {

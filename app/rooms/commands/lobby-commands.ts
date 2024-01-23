@@ -1,7 +1,7 @@
 import { Command } from "@colyseus/command"
-import { Client, logger, RoomListingData } from "colyseus"
+import { Client, logger, matchMaker, RoomListingData } from "colyseus"
 import { ArraySchema } from "@colyseus/schema"
-import { EmbedBuilder } from "discord.js"
+import { EmbedBuilder, messageLink } from "discord.js"
 import { nanoid } from "nanoid"
 import { GameRecord } from "../../models/colyseus-models/game-record"
 import LobbyUser from "../../models/colyseus-models/lobby-user"
@@ -25,8 +25,12 @@ import { Pkm, PkmIndex, Unowns } from "../../types/enum/Pokemon"
 import { Language } from "../../types/enum/Language"
 import PokemonConfig from "../../models/colyseus-models/pokemon-config"
 import { PRECOMPUTED_POKEMONS_PER_RARITY } from "../../models/precomputed"
-import { BoosterRarityProbability, getEmotionCost } from "../../types/Config"
-import { Rarity } from "../../types/enum/Game"
+import {
+  BoosterRarityProbability,
+  EloRank,
+  getEmotionCost
+} from "../../types/Config"
+import { LobbyType, Rarity } from "../../types/enum/Game"
 import { sum } from "../../utils/array"
 import { pickRandomIn } from "../../utils/random"
 import { getPortraitSrc, getAvatarSrc } from "../../public/src/utils"
@@ -1042,6 +1046,48 @@ export class OnBotUploadCommand extends Command<
         .catch((error) => {
           logger.error(error)
         })
+    } catch (error) {
+      logger.error(error)
+    }
+  }
+}
+
+export class OpenRankedLobbyCommand extends Command<
+  CustomLobbyRoom,
+  { minRank: EloRank }
+> {
+  execute({ minRank }: { minRank: EloRank }) {
+    logger.info("Creating Ranked Lobby " + minRank)
+    let roomName = "Ranked Match"
+    if (minRank === EloRank.GREATBALL) {
+      roomName = "Great Ball Ranked Match"
+    }
+    if (minRank === EloRank.ULTRABALL) {
+      roomName = "Ultra Ball Ranked Match"
+    }
+
+    matchMaker.createRoom("preparation", {
+      lobbyType: LobbyType.RANKED,
+      minRank,
+      ownerId: null,
+      roomName,
+      autoStartDelayInSeconds: 15 * 60
+    })
+
+    this.state.getNextSpecialLobbyDate()
+  }
+}
+
+export class MakeServerAnnouncementCommand extends Command<
+  CustomLobbyRoom,
+  { client: Client; message: string }
+> {
+  async execute({ client, message }: { client: Client; message: string }) {
+    try {
+      const u = this.state.users.get(client.auth.uid)
+      if (u && u.role && u.role === Role.ADMIN) {
+        this.state.addAnnouncement(message)
+      }
     } catch (error) {
       logger.error(error)
     }

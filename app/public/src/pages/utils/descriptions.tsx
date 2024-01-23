@@ -22,7 +22,8 @@ export const iconRegExp = new RegExp(
     ...Statuses,
     ...Weathers,
     ...Synergies,
-    ...Items
+    ...Items,
+    "GOLD"
   ].join("|")}|\\[[^\\]]+\\])(?=\\W|$)`,
   "g"
 )
@@ -35,7 +36,15 @@ export function addIconsToDescription(description: string, tier = 0, ap = 0) {
     const token = matchIcon![i - 1]
     let d: ReactElement | null = null
     if (token) {
-      if (DamageTypes.includes(token)) {
+      if (token === "GOLD") {
+        d = (
+          <img
+            className="description-icon icon-money"
+            src="/assets/icons/money.svg"
+            alt="$"
+          />
+        )
+      } else if (DamageTypes.includes(token)) {
         d = (
           <span
             key={i}
@@ -93,7 +102,7 @@ export function addIconsToDescription(description: string, tier = 0, ap = 0) {
       } else if (Synergies.includes(token as Synergy)) {
         d = (
           <span key={i} className="description-icon synergy">
-            <SynergyIcon key={i} type={token as Synergy} size="20px" />
+            <SynergyIcon key={i} type={token as Synergy} size="1.5em" />
             <span className="synergy-label">{t(`synergy.${token}`)}</span>
           </span>
         )
@@ -105,7 +114,7 @@ export function addIconsToDescription(description: string, tier = 0, ap = 0) {
         }
 
         d = (
-          <span className={cc("description-icon", { "scales-ap": scale > 0 })}>
+          <span className={cc("description-icon", { "scales-ap": scale !== 0 })}>
             {scale > 0 && (
               <img
                 src="assets/icons/AP.png"

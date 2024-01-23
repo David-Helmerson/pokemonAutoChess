@@ -16,6 +16,7 @@ import {
   removeUser,
   setBotsList,
   setGameStarted,
+  setLobbyType,
   setName,
   setOwnerId,
   setOwnerName,
@@ -31,7 +32,7 @@ import { playSound, SOUNDS } from "./utils/audio"
 import { IBot } from "../../../models/mongo-models/bot-v2"
 import { logger } from "../../../utils/logger"
 import { GameUser } from "../../../models/colyseus-models/game-user"
-import { MainSidebar } from "./component/main-sidebar"
+import { MainSidebar } from "./component/main-sidebar/main-sidebar"
 import { useTranslation } from "react-i18next"
 import { PreloadingScene } from "../game/scenes/preloading-scene"
 import { localStore, LocalStoreKeys } from "./utils/store"
@@ -125,6 +126,10 @@ export default function Preparation() {
 
       r.state.listen("selectedMap", (value, previousValue) => {
         dispatch(setSelectedMap(value))
+      })
+
+      r.state.listen("lobbyType", (value, previousValue) => {
+        dispatch(setLobbyType(value))
       })
 
       r.state.users.onAdd((u) => {

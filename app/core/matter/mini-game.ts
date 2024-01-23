@@ -14,8 +14,13 @@ import {
 import Player from "../../models/colyseus-models/player"
 import { getOrientation } from "../../public/src/pages/utils/utils"
 import { PokemonActionState } from "../../types/enum/Game"
-import { BasicItems, CompletedItems, Item } from "../../types/enum/Item"
-import { pickNRandomIn, pickRandomIn, shuffleArray } from "../../utils/random"
+import { BasicItems, CraftableItems, Item } from "../../types/enum/Item"
+import {
+  pickNRandomIn,
+  pickRandomIn,
+  randomBetween,
+  shuffleArray
+} from "../../utils/random"
 import { clamp, min } from "../../utils/number"
 import {
   ItemCarouselStages,
@@ -26,13 +31,13 @@ import {
 } from "../../types/Config"
 import { Synergy } from "../../types/enum/Synergy"
 import GameState from "../../rooms/states/game-state"
-import { entries, keys, values } from "../../utils/schemas"
+import { keys, values } from "../../utils/schemas"
 
 const PLAYER_VELOCITY = 2
 const ITEM_ROTATION_SPEED = 0.0004
 const PORTAL_ROTATION_SPEED = 0.0003
 const SYMBOL_ROTATION_SPEED = 0.0006
-const CAROUSEL_RADIUS = 140
+const CAROUSEL_RADIUS = 150
 const NB_SYMBOLS_PER_PLAYER = 4
 
 export class MiniGame {
@@ -200,6 +205,9 @@ export class MiniGame {
       if (PortalCarouselStages.includes(stageLevel)) {
         retentionDelay = 8000
       }
+      if (player.isBot) {
+        retentionDelay += randomBetween(1000, 6000)
+      }
 
       const avatar = new PokemonAvatarModel(
         player.id,
@@ -317,7 +325,7 @@ export class MiniGame {
       // Carousels after stage 20 propose full items and no longer components, and have one more proposition
       nbItemsToPick += 1
       maxCopiesPerItem = 1
-      itemsSet = CompletedItems
+      itemsSet = CraftableItems
     }
 
     for (let j = 0; j < nbItemsToPick; j++) {

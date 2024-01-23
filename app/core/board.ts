@@ -7,7 +7,7 @@ import { distanceC } from "../utils/distance"
 import { logger } from "../utils/logger"
 import { OrientationArray, OrientationVector } from "../utils/orientation"
 import { pickRandomIn } from "../utils/random"
-import PokemonEntity from "./pokemon-entity"
+import { PokemonEntity, getStrongestUnit } from "./pokemon-entity"
 
 export type Cell = {
   x: number
@@ -99,11 +99,6 @@ export default class Board {
     return null
   }
 
-  distanceC(x0: number, y0: number, x1: number, y1: number) {
-    // Manhattan distance
-    return Math.abs(x1 - x0) + Math.abs(y1 - y0)
-  }
-
   orientation(
     x0: number,
     y0: number,
@@ -170,7 +165,11 @@ export default class Board {
     return cells
   }
 
-  getCellsInFront(pokemon: PokemonEntity, target: PokemonEntity) {
+  getCellsInFront(
+    pokemon: PokemonEntity,
+    target: PokemonEntity,
+    range: number = 1
+  ) {
     const cells = new Array<Cell>()
 
     pokemon.orientation = this.orientation(
@@ -188,11 +187,15 @@ export default class Board {
       OrientationArray[(OrientationArray.indexOf(pokemon.orientation) + 7) % 8]
     ]
 
-    orientations.forEach((orientation) => {
-      const x = pokemon.positionX + OrientationVector[orientation][0]
-      const y = pokemon.positionY + OrientationVector[orientation][1]
-      cells.push({ x, y, value: this.cells[this.columns * y + x] })
-    })
+    for (let r = 1; r <= range; r++) {
+      orientations.forEach((orientation) => {
+        const x = pokemon.positionX + OrientationVector[orientation][0] * r
+        const y = pokemon.positionY + OrientationVector[orientation][1] * r
+        if (y >= 0 && y < this.rows && x >= 0 && x < this.columns) {
+          cells.push({ x, y, value: this.cells[this.columns * y + x] })
+        }
+      })
+    }
 
     return cells
   }
@@ -331,27 +334,9 @@ export default class Board {
   }
 
   getStrongestUnitOnBoard(team?: number): PokemonEntity | undefined {
-    /*
-    strongest is defined as:
-    1) number of items
-    2) stars level
-    3) rarity cost
-    */
-    let strongest,
-      bestScore = 0
-    this.forEach((x, y, pokemon) => {
-      if (pokemon && (pokemon.team === team || team === undefined)) {
-        let score = 0
-        score += 100 * pokemon.items.size
-        score += 10 * pokemon.stars
-        score += PokemonFactory.getSellPrice(pokemon.name)
-
-        if (score > bestScore) {
-          bestScore = score
-          strongest = pokemon
-        }
-      }
-    })
-    return strongest
+    const candidates = this.cells.filter(
+      (cell) => cell && (cell.team === team || team === undefined)
+    ) as PokemonEntity[]
+    return getStrongestUnit(candidates)
   }
 }

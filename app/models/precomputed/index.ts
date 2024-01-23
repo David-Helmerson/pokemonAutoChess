@@ -16,7 +16,6 @@ export const PRECOMPUTED_POKEMONS_PER_TYPE_AND_CATEGORY =
       pokemons: Pkm[]
       uniquePokemons: Pkm[]
       legendaryPokemons: Pkm[]
-      mythicalPokemons: Pkm[]
       additionalPokemons: Pkm[]
     }
   }
@@ -37,7 +36,7 @@ export const PRECOMPUTED_POKEMONS_PER_ABILITY =
   }
 
 export const PRECOMPUTED_POKEMONS_STARS = JSON_PRECOMPUTED_POKEMONS_STARS as {
-  [pkm in Pkm]: number
+  [pkm in Pkm]?: number
 }
 
 export const PRECOMPUTED_EMOTIONS_PER_POKEMON_INDEX =

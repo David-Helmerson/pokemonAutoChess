@@ -10,10 +10,11 @@ export default function WikiStatus() {
     Status.BURN,
     Status.CHARM,
     Status.CONFUSION,
+    Status.CURSE,
     Status.FLINCH,
     Status.FREEZE,
     Status.PARALYSIS,
-    Status.POISON,
+    Status.POISONNED,
     Status.PROTECT,
     Status.RESURECTION,
     Status.RUNE_PROTECT,
@@ -24,13 +25,12 @@ export default function WikiStatus() {
     Status.FAIRY_FIELD,
     Status.GRASS_FIELD,
     Status.PSYCHIC_FIELD
-    
   ]
   return (
     <ul className="wiki-status">
       {statusList.map((status) => (
         <li key={status} className="nes-container">
-          <img src={`assets/status/demo/${status}.png`} alt={status} />
+          <img src={`assets/status/demo/${status}.gif`} alt={status} />
           <h2>{addIconsToDescription(status)}</h2>
           <p className="description">
             {addIconsToDescription(t(`status_description.${status}`))}

@@ -9,9 +9,10 @@ import {
   StageDuration,
   BOARD_WIDTH,
   BOARD_HEIGHT,
-  DungeonPMDO
+  DungeonPMDO,
+  EloRank
 } from "../../types/Config"
-import { GamePhaseState } from "../../types/enum/Game"
+import { GamePhaseState, LobbyType } from "../../types/enum/Game"
 import { Weather } from "../../types/enum/Weather"
 import {
   Schema,
@@ -41,6 +42,7 @@ export default class GameState extends Schema {
   @type("string") mapName: string
   @type("string") weather: Weather
   @type("boolean") noElo = false
+  @type("string") lobbyType: LobbyType = LobbyType.NORMAL
   @type({ set: "string" }) spectators = new SetSchema<string>()
   @type({ map: Simulation }) simulations = new MapSchema<Simulation>()
   @type("uint8") lightX = randomBetween(0, BOARD_WIDTH - 1)
@@ -61,12 +63,15 @@ export default class GameState extends Schema {
   preparationId: string
   shinyEncounter = false
   pveRewards: Item[] = []
+  minRank: EloRank | null = null
 
   constructor(
     preparationId: string,
     name: string,
     noElo: boolean,
-    selectedMap: DungeonPMDO | "random"
+    selectedMap: DungeonPMDO | "random",
+    lobbyType: LobbyType,
+    minRank: EloRank | null
   ) {
     super()
     this.preparationId = preparationId
@@ -74,6 +79,8 @@ export default class GameState extends Schema {
     this.name = name
     this.id = selectedMap === "random" ? pickRandomIn(DungeonPMDO) : selectedMap
     this.noElo = noElo
+    this.lobbyType = lobbyType
+    this.minRank = minRank
     this.mapName = this.id
     this.mapMusic = pickRandomIn(Object.keys(Dungeon) as Dungeon[])
     this.weather = Weather.NEUTRAL    

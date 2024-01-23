@@ -6,7 +6,7 @@ import UnownManager from "../components/unown-manager"
 import WeatherManager from "../components/weather-manager"
 import ItemsContainer from "../components/items-container"
 import Pokemon from "../components/pokemon"
-import { Dungeon, DungeonPMDO, ItemRecipe } from "../../../../types/Config"
+import { Dungeon, DungeonPMDO } from "../../../../types/Config"
 import firebase from "firebase/compat/app"
 import { transformCoordinate } from "../../pages/utils/utils"
 import { Room } from "colyseus.js"
@@ -22,16 +22,17 @@ import {
   Transfer
 } from "../../../../types"
 import { DesignTiled } from "../../../../core/design"
-import { Item } from "../../../../types/enum/Item"
+import { Item, ItemRecipe } from "../../../../types/enum/Item"
 import Player from "../../../../models/colyseus-models/player"
 import MinigameManager from "../components/minigame-manager"
 import LoadingManager from "../components/loading-manager"
 import Simulation from "../../../../core/simulation"
-import { playMusic } from "../../pages/utils/audio"
+import { SOUNDS, playMusic, playSound } from "../../pages/utils/audio"
 import { getGameContainer } from "../../pages/game"
 import { preferences } from "../../preferences"
 import { SellZone } from "../components/sell-zone"
 import { t } from "i18next"
+import { clearTitleNotificationIcon } from "../../../../utils/window"
 
 export default class GameScene extends Scene {
   tilemap: DesignTiled | undefined
@@ -164,11 +165,13 @@ export default class GameScene extends Scene {
         this.animationManager,
         this.uid
       )
+      playSound(SOUNDS.CAROUSEL_UNLOCK) // playing a preloaded sound for players who tabbed out during loading
       playMusic(
         this,
         this.dungeonMusic ? this.dungeonMusic : Dungeon.AMP_PLAINS
       )
       ;(this.sys as any).animatedTiles.init(this.map)
+      clearTitleNotificationIcon()
     }
   }
 
@@ -297,7 +300,7 @@ export default class GameScene extends Scene {
           pointer.x,
           pointer.y,
           "attacks",
-          `WATER/cell/000`
+          `WATER/cell/000.png`
         )
         clickAnimation.setDepth(7)
         clickAnimation.anims.play("WATER/cell")
@@ -334,7 +337,10 @@ export default class GameScene extends Scene {
       (pointer, gameObject: Phaser.GameObjects.GameObject) => {
         if (gameObject instanceof Pokemon) {
           this.pokemonDragged = gameObject
-          const price = PokemonFactory.getSellPrice(gameObject.name as Pkm)
+          const price = PokemonFactory.getSellPrice(
+            gameObject.name as Pkm,
+            getGameContainer().player
+          )
           this.sellZone?.text.setText(
             `${t("drop_here_to_sell")} ${t("for_price_gold", { price })}`
           )

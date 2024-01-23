@@ -18,7 +18,7 @@ import {
   UncommonShop,
   FishRarityProbability,
   SHOP_SIZE,
-  NB_MYTHICAL_PROPOSITIONS
+  NB_UNIQUE_PROPOSITIONS
 } from "../types/Config"
 import { Rarity } from "../types/enum/Game"
 import { chance, pickNRandomIn, pickRandomIn } from "../utils/random"
@@ -88,7 +88,14 @@ export default class Shop {
   releasePokemon(pkm: Pkm) {
     const pokemon = PokemonFactory.createPokemonFromName(pkm)
     const family = PkmFamily[pokemon.name]
-    const entityNumber = pokemon.stars === 3 ? 9 : pokemon.stars === 2 ? 3 : 1
+    let entityNumber = pokemon.stars >= 3 ? 9 : pokemon.stars === 2 ? 3 : 1
+    const duo = Object.entries(PkmDuos).find(([key, duo]) => duo.includes(pkm))
+    if (duo) {
+      // duos increase the number in pool by one if selling both
+      // but it is negligible and cannot be abused
+      entityNumber = Math.ceil(entityNumber / 2)
+    }
+
     if (pokemon.rarity === Rarity.COMMON) {
       const value = this.commonPool.get(family)
       if (value !== undefined) {
@@ -123,7 +130,7 @@ export default class Shop {
       if (pokemon != Pkm.MAGIKARP && pokemon != Pkm.DEFAULT) {
         return pokemon
       }
-            return this.pickPokemon(player, stageLevel)
+      return this.pickPokemon(player, stageLevel)
     })
 
     for (let i = 0; i < SHOP_SIZE; i++) {
@@ -151,27 +158,27 @@ export default class Shop {
     list: PkmProposition[],
     synergies: Synergy[]
   ) {
-    const mythicals = [...list]
+    const propositions = [...list]
 
     // ensure we have at least one synergy per proposition
-    if (synergies.length > NB_MYTHICAL_PROPOSITIONS) {
-      synergies = pickNRandomIn(synergies, NB_MYTHICAL_PROPOSITIONS)
-    } else if (synergies.length < NB_MYTHICAL_PROPOSITIONS) {
-      while (synergies.length < NB_MYTHICAL_PROPOSITIONS) {
+    if (synergies.length > NB_UNIQUE_PROPOSITIONS) {
+      synergies = pickNRandomIn(synergies, NB_UNIQUE_PROPOSITIONS)
+    } else if (synergies.length < NB_UNIQUE_PROPOSITIONS) {
+      while (synergies.length < NB_UNIQUE_PROPOSITIONS) {
         synergies.push(pickRandomIn(Synergy))
       }
     }
 
-    for (let i = 0; i < NB_MYTHICAL_PROPOSITIONS; i++) {
+    for (let i = 0; i < NB_UNIQUE_PROPOSITIONS; i++) {
       const synergy = synergies[i]
-      const candidates = mythicals.filter((m) => {
+      const candidates = propositions.filter((m) => {
         const pkm: Pkm = m in PkmDuos ? PkmDuos[m][0] : m
         return PokemonFactory.createPokemonFromName(pkm).types.has(synergy)
       })
       const selectedProposition = pickRandomIn(
-        candidates.length > 0 ? candidates : mythicals
+        candidates.length > 0 ? candidates : propositions
       )
-      removeInArray(mythicals, selectedProposition)
+      removeInArray(propositions, selectedProposition)
       player.pokemonsProposition.push(selectedProposition)
     }
   }
@@ -217,7 +224,11 @@ export default class Shop {
     }
 
     const UNOWN_RATE = 0.05
-    if (player.effects.has(Effect.LIGHT_SCREEN) && chance(UNOWN_RATE)) {
+    if (
+      (player.effects.has(Effect.LIGHT_SCREEN) ||
+        player.effects.has(Effect.EERIE_SPELL)) &&
+      chance(UNOWN_RATE)
+    ) {
       const unowns = getUnownsPoolPerStage(stageLevel)
       return pickRandomIn(unowns)
     }

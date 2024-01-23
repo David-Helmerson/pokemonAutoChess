@@ -2,7 +2,8 @@ import {
   ArraySchema,
   MapSchema,
   SetSchema,
-  CollectionSchema
+  CollectionSchema,
+  Schema
 } from "@colyseus/schema"
 import Board from "../core/board"
 import Dps from "../core/dps"
@@ -20,7 +21,9 @@ import {
   BoardEvent,
   Orientation,
   PokemonActionState,
-  Rarity
+  Rarity,
+  SpecialLobbyType,
+  Stat
 } from "./enum/Game"
 import { Emotion } from "./enum/Emotion"
 import { Effect } from "./enum/Effect"
@@ -35,6 +38,8 @@ import GameRoom from "../rooms/game-room"
 import { Passive } from "./enum/Passive"
 import { Weather } from "./enum/Weather"
 import { Effects } from "../models/effects"
+import { EvolutionRule } from "../core/evolution-rules"
+import Player from "../models/colyseus-models/player"
 
 export * from "./enum/Emotion"
 
@@ -60,14 +65,6 @@ export enum Role {
   BASIC = "BASIC",
   BOT = "BOT",
   BOT_MANAGER = "BOT_MANAGER"
-}
-
-export const RoleName: { [key in Role]: string } = {
-  [Role.ADMIN]: "Creator",
-  [Role.MODERATOR]: "Mod",
-  [Role.BASIC]: "Basic",
-  [Role.BOT]: "Bot",
-  [Role.BOT_MANAGER]: "Bot Manager"
 }
 
 export const RoleColor: { [key in Role]: string } = {
@@ -154,7 +151,8 @@ export enum Transfer {
   ABILITY = "ABILITY",
   SELECT_LANGUAGE = "SELECT_LANGUAGE",
   USER_PROFILE = "USER_PROFILE",
-  PICK_BERRY = "PICK_BERRY"
+  PICK_BERRY = "PICK_BERRY",
+  SERVER_ANNOUNCEMENT = "SERVER_ANNOUNCEMENT"
 }
 
 export enum AttackSprite {
@@ -182,8 +180,39 @@ export enum AttackSprite {
   POISON_RANGE = "POISON/range",
   BUG_MELEE = "BUG/melee",
   FLYING_MELEE = "FLYING/melee",
-  ICE_RANGE = "ICE/range"
+  ICE_RANGE = "ICE/range",
+  STEEL_MELEE = "STEEL/melee"
 }
+
+export const AttackSpriteScale: { [sprite in AttackSprite]: [number, number] } =
+  {
+    "BUG/melee": [1.5, 1.5],
+    "DRAGON/melee": [2, 2],
+    "DRAGON/range": [2, 2],
+    "ELECTRIC/melee": [1.5, 1.5],
+    "ELECTRIC/range": [2, 2],
+    "FAIRY/melee": [2, 2],
+    "FAIRY/range": [1.5, 1.5],
+    "FIGHTING/melee": [2, 2],
+    "FIGHTING/range": [2, 2],
+    "FIRE/melee": [1, 1],
+    "FIRE/range": [2, 2],
+    "FLYING/melee": [1.5, 1.5],
+    "FLYING/range": [1.5, 1.5],
+    "GHOST/range": [2, 2],
+    "GRASS/melee": [1.5, 1.5],
+    "GRASS/range": [3, 3],
+    "ICE/melee": [2, 2],
+    "ICE/range": [2, 2],
+    "NORMAL/melee": [2, 2],
+    "POISON/melee": [1, 1],
+    "POISON/range": [1.5, 1.5],
+    "PSYCHIC/range": [2, 2],
+    "ROCK/melee": [1.5, 1.5],
+    "STEEL/melee": [1.5, 1.5],
+    "WATER/melee": [2, 2],
+    "WATER/range": [3, 3]
+  }
 
 export enum ModalMode {
   EXPORT = "EXPORT",
@@ -234,15 +263,17 @@ export interface IDragDropCombineMessage {
   itemB: Item
 }
 
-export interface ICustomLobbyState {
+export interface ICustomLobbyState extends Schema {
   messages: ArraySchema<Message>
   users: MapSchema<LobbyUser>
   leaderboard: ILeaderboardInfo[]
   botLeaderboard: ILeaderboardInfo[]
   levelLeaderboard: ILeaderboardInfo[]
+  nextSpecialLobbyDate: number
+  nextSpecialLobbyType: SpecialLobbyType | ""
 }
 
-export interface IGameState {
+export interface IGameState extends Schema {
   afterGameId: string
   roundTime: number
   phase: string
@@ -343,6 +374,7 @@ export interface IPokemon {
   rarity: Rarity
   index: string
   evolution: Pkm
+  evolutionRule: EvolutionRule
   positionX: number
   positionY: number
   attackSprite: AttackSprite
@@ -418,12 +450,28 @@ export function instanceofPokemonEntity(
 
 export interface IPokemonEntity {
   simulation: ISimulation
+  refToBoardPokemon: IPokemon
+  applyStat(stat: Stat, value: number): void
   addAbilityPower(value: number): void
+  addPP(pp: number): void
   addAttack(atk: number): void
   addAttackSpeed(as: number): void
   addMaxHP(life: number): void
-  addShield(shieldBonus: number, pokemon: IPokemonEntity)
-  update(dt: number, board: Board, weather: string)
+  addShield(
+    shieldBonus: number,
+    pokemon: IPokemonEntity,
+    apBoost?: boolean
+  ): void
+  addDefense(value: number, apBoost?: boolean): void
+  addSpecialDefense(value: number, apBoost?: boolean): void
+  addCritChance(value: number): void
+  addCritDamage(value: number, apBoost?: boolean): void
+  update(
+    dt: number,
+    board: Board,
+    weather: string,
+    player: Player | undefined
+  ): void
   physicalDamage: number
   specialDamage: number
   trueDamage: number
@@ -515,6 +563,7 @@ export interface ICount {
   healOrderCount: number
   attackOrderCount: number
   monsterExecutionCount: number
+  magmarizerCount: number
 }
 
 export interface IPreparationMetadata {
@@ -523,6 +572,7 @@ export interface IPreparationMetadata {
   noElo: boolean
   type: "preparation"
   gameStarted: boolean
+  minRank: string | null
 }
 
 export interface IGameMetadata {
@@ -599,7 +649,10 @@ export enum Title {
   ARCHEOLOGIST = "ARCHEOLOGIST",
   DENTIST = "DENTIST",
   FISHERMAN = "FISHERMAN",
-  CHOSEN_ONE = "CHOSEN_ONE"
+  CHOSEN_ONE = "CHOSEN_ONE",
+  VANQUISHER = "VANQUISHER",
+  OUTSIDER = "OUTSIDER",
+  GLUTTON = "GLUTTON"
 }
 
 export interface IBoardEvent {

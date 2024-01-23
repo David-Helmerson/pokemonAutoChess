@@ -41,7 +41,7 @@ export abstract class EvolutionRule {
   }
 
   afterEvolve(pokemonEvolved: Pokemon, player: Player) {
-    player.synergies.update(player.board)
+    player.updateSynergies()
     player.effects.update(player.synergies, player.board)
     pokemonEvolved.onAcquired(player)
   }
@@ -84,6 +84,8 @@ export class CountEvolutionRule extends EvolutionRule {
     const itemsToAdd = new Array<Item>()
     const basicItemsToAdd = new Array<Item>()
 
+    const pokemonsBeforeEvolution: Pokemon[] = []
+
     player.board.forEach((pkm, id) => {
       if (pkm.index == pokemon.index) {
         // logger.debug(pkm.name, pokemon.name)
@@ -109,6 +111,7 @@ export class CountEvolutionRule extends EvolutionRule {
           }
         })
         player.board.delete(id)
+        pokemonsBeforeEvolution.push(pkm)
       }
     })
 
@@ -116,6 +119,9 @@ export class CountEvolutionRule extends EvolutionRule {
       pokemonEvolutionName,
       player
     )
+    if (pokemon.onEvolve) {
+      pokemon.onEvolve({ pokemonEvolved, pokemonsBeforeEvolution, player })
+    }
 
     for (let i = 0; i < 3; i++) {
       const itemToAdd = itemsToAdd.pop()
@@ -233,6 +239,30 @@ export class TurnEvolutionRule extends EvolutionRule {
 
   canEvolve(pokemon: Pokemon, player: Player, stageLevel: number): boolean {
     return stageLevel >= this.stageLevel
+  }
+
+  evolve(pokemon: Pokemon, player: Player, stageLevel: number): Pokemon {
+    let pokemonEvolutionName = pokemon.evolution
+    if (this.divergentEvolution) {
+      pokemonEvolutionName = this.divergentEvolution(pokemon, player)
+    }
+    const pokemonEvolved = player.transformPokemon(
+      pokemon,
+      pokemonEvolutionName
+    )
+    return pokemonEvolved
+  }
+}
+
+export class MoneyEvolutionRule extends EvolutionRule {
+  money: number
+  constructor(money: number, divergentEvolution?: DivergentEvolution) {
+    super(divergentEvolution)
+    this.money = money
+  }
+
+  canEvolve(pokemon: Pokemon, player: Player, stageLevel: number): boolean {
+    return player.money >= this.money
   }
 
   evolve(pokemon: Pokemon, player: Player, stageLevel: number): Pokemon {

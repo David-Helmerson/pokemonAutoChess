@@ -16,7 +16,7 @@ import {
   NonFunctionPropNames,
   ISimplePlayer
 } from "../../../types"
-import PokemonEntity from "../../../core/pokemon-entity"
+import { PokemonEntity } from "../../../core/pokemon-entity"
 import { DesignTiled } from "../../../core/design"
 import { toast } from "react-toastify"
 import React from "react"
@@ -40,6 +40,8 @@ import Count from "../../../models/colyseus-models/count"
 import { Ability } from "../../../types/enum/Ability"
 import { Portal, SynergySymbol } from "../../../models/colyseus-models/portal"
 import Simulation from "../../../core/simulation"
+import { BoardMode } from "./components/board-manager"
+import { changePlayer } from "../stores/GameStore"
 
 class GameContainer {
   room: Room<GameState>
@@ -92,12 +94,13 @@ class GameContainer {
   }
 
   initializePokemon(pokemon: PokemonEntity, simulation: Simulation) {
-    this.gameScene?.battle?.addPokemon(simulation.id, pokemon)
+    this.gameScene?.battle?.addPokemonEntitySprite(simulation.id, pokemon)
     const fields: NonFunctionPropNames<Status>[] = [
       "armorReduction",
       "burn",
       "charm",
       "confusion",
+      "curse",
       "deltaOrbStacks",
       "electricField",
       "fairyField",
@@ -148,7 +151,8 @@ class GameContainer {
         "team",
         "index",
         "skill",
-        "stars"
+        "stars",
+        "types"
       ]
 
       fields.forEach((field) => {
@@ -186,6 +190,7 @@ class GameContainer {
       "manaBurnCount",
       "staticCount",
       "moneyCount",
+      "amuletCoinCount",
       "attackCount",
       "tripleAttackCount",
       "monsterExecutionCount",
@@ -193,7 +198,8 @@ class GameContainer {
       "soulDewCount",
       "defensiveRibbonCount",
       "attackOrderCount",
-      "healOrderCount"
+      "healOrderCount",
+      "magmarizerCount"
     ]
 
     fieldsCount.forEach((field) => {
@@ -202,7 +208,8 @@ class GameContainer {
           simulation.id,
           pokemon,
           field,
-          value
+          value,
+          previousValue
         )
       })
     })
@@ -331,7 +338,7 @@ class GameContainer {
   }
 
   initializePlayer(player: Player) {
-    //logger.debug("initializePlayer", player, this.uid)
+    //logger.debug("initializePlayer", player, player.id)
     if (this.uid == player.id) {
       this.setPlayer(player)
       if (this.tilemap) {
@@ -342,9 +349,26 @@ class GameContainer {
       this.initializeGame()
     }
 
+    const listenForPokemonChanges = (pokemon: Pokemon) => {
+      pokemon.onChange(() => {
+        const fields: NonFunctionPropNames<Pokemon>[] = [
+          "positionX",
+          "positionY",
+          "action",
+          "types"
+        ]
+        fields.forEach((field) => {
+          pokemon.listen(field, (value, previousValue) => {
+            if (player.id === this.spectatedPlayerId) {
+              this.gameScene?.board?.changePokemon(pokemon, field, value)
+            }
+          })
+        })
+      })
+    }
+
     player.board.onAdd((pokemon, key) => {
-      const p = <Pokemon>pokemon
-      if (p.stars > 1) {
+      if (pokemon.stars > 1) {
         const config: IPokemonConfig | undefined = player.pokemonCollection.get(
           pokemon.index
         )
@@ -365,31 +389,29 @@ class GameContainer {
         })
       }
 
-      const fields: NonFunctionPropNames<Pokemon>[] = [
-        "positionX",
-        "positionY",
-        "action"
-      ]
-      fields.forEach((field) => {
-        p.listen(field, (value, previousValue) => {
-          if (player.id === this.spectatedPlayerId) {
-            this.gameScene?.board?.changePokemon(pokemon, field, value)
-          }
-        })
-      })
+      listenForPokemonChanges(pokemon)
 
-      p.items.onChange((value, key) => {
+      pokemon.items.onChange((value, key) => {
         if (player.id === this.spectatedPlayerId) {
-          this.gameScene?.board?.updatePokemonItems(player.id, p)
+          this.gameScene?.board?.updatePokemonItems(player.id, pokemon)
         }
       })
 
-      this.handleBoardPokemonAdd(player, p)
-    })
+      this.handleBoardPokemonAdd(player, pokemon)
+    }, false)
 
     player.board.onRemove((pokemon, key) => {
       if (player.id === this.spectatedPlayerId) {
         this.gameScene?.board?.removePokemon(pokemon)
+      }
+    })
+
+    player.board.onChange((pokemon, key) => {
+      store.dispatch(
+        changePlayer({ id: player.id, field: "board", value: player.board })
+      )
+      if (pokemon) {
+        listenForPokemonChanges(pokemon)
       }
     })
 
@@ -513,8 +535,13 @@ class GameContainer {
   /* Board pokemons */
 
   handleBoardPokemonAdd(player: IPlayer, pokemon: IPokemon) {
-    if (player.id === this.spectatedPlayerId) {
-      const pokemonUI = this.gameScene?.board?.addPokemon(pokemon)
+    const board = this.gameScene?.board
+    if (
+      board &&
+      player.id === this.spectatedPlayerId &&
+      (board.mode === BoardMode.PICK || pokemon.positionY === 0)
+    ) {
+      const pokemonUI = this.gameScene?.board?.addPokemonSprite(pokemon)
       if (pokemonUI && pokemon.action === PokemonActionState.FISH) {
         pokemonUI.fishingAnimation()
       }

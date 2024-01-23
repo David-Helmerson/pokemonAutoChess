@@ -116,7 +116,7 @@ export default class MinigameManager {
   removeItem(itemToRemove: IFloatingItem) {
     const itemUI = this.items.get(itemToRemove.id)
     if (itemUI) {
-      itemUI.destroy(true)
+      itemUI.destroy()
     }
     this.items.delete(itemToRemove.id)
   }
@@ -155,7 +155,7 @@ export default class MinigameManager {
   removePortal(portalToRemove: IPortal) {
     const portalUI = this.portals.get(portalToRemove.id)
     if (portalUI) {
-      portalUI.destroy(true)
+      portalUI.destroy()
     }
     this.portals.delete(portalToRemove.id)
   }
@@ -177,9 +177,6 @@ export default class MinigameManager {
         case "avatarId":
           if (value != "" && typeof value === "string") {
             const avatar = this.pokemons.get(value)
-            logger.debug(
-              `Player ${value} (${avatar?.playerId}) has taken portal ${portal.id}`
-            )
             this.symbols.forEach((symbol) => {
               if (symbol.getData("portalId") === portal.id) {
                 this.removeSymbol(symbol)
@@ -213,7 +210,7 @@ export default class MinigameManager {
   removeSymbol(symbolToRemove: ISynergySymbol) {
     const symbolUI = this.symbols.get(symbolToRemove.id)
     if (symbolUI) {
-      symbolUI.destroy(true)
+      symbolUI.destroy()
     }
     if (this.symbols.has(symbolToRemove.id)) {
       this.symbols.delete(symbolToRemove.id)
@@ -282,7 +279,7 @@ export default class MinigameManager {
   removePokemon(pokemonToRemove: IPokemonAvatar) {
     const pokemonUI = this.pokemons.get(pokemonToRemove.id)
     if (pokemonUI) {
-      pokemonUI.destroy(true)
+      pokemonUI.destroy()
     }
     this.pokemons.delete(pokemonToRemove.id)
   }

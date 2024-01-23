@@ -91,7 +91,7 @@ import { toast } from "react-toastify"
 import { logger } from "../../../utils/logger"
 import { RequiredStageLevelForXpElligibility } from "../../../types/Config"
 import { useTranslation } from "react-i18next"
-import { MainSidebar } from "./component/main-sidebar"
+import { MainSidebar } from "./component/main-sidebar/main-sidebar"
 import { localStore, LocalStoreKeys } from "./utils/store"
 import { IUserMetadata } from "../../../models/mongo-models/user-metadata"
 import { PokemonActionState } from "../../../types/enum/Game"
@@ -347,7 +347,7 @@ export default function Game() {
         toast(
           <div className="toast-player-income">
             <span style={{ verticalAlign: "middle" }}>+{value}</span>
-            <img className="icon-money" src="/assets/ui/money.svg" alt="$" />
+            <img className="icon-money" src="/assets/icons/money.svg" alt="$" />
           </div>,
           { containerId: "toast-money" }
         )

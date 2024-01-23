@@ -2,7 +2,7 @@ import { Item } from "../types/enum/Item"
 import { AttackType } from "../types/enum/Game"
 import { Effect } from "../types/enum/Effect"
 import Board from "./board"
-import PokemonEntity from "./pokemon-entity"
+import { PokemonEntity } from "./pokemon-entity"
 import PokemonState from "./pokemon-state"
 import { PokemonActionState } from "../types/enum/Game"
 import { chance } from "../utils/random"
@@ -11,13 +11,22 @@ import { Synergy } from "../types/enum/Synergy"
 import { max, min } from "../utils/number"
 import { Passive } from "../types/enum/Passive"
 import { AbilityStrategies } from "./abilities/abilities"
+import Player from "../models/colyseus-models/player"
 
 export default class AttackingState extends PokemonState {
-  update(pokemon: PokemonEntity, dt: number, board: Board, weather: string) {
-    super.update(pokemon, dt, board, weather)
+  update(
+    pokemon: PokemonEntity,
+    dt: number,
+    board: Board,
+    weather: string,
+    player: Player
+  ) {
+    super.update(pokemon, dt, board, weather, player)
 
     if (pokemon.cooldown <= 0) {
       pokemon.cooldown = pokemon.getAttackDelay()
+
+      // first, try to hit the same target than previous attack
       let target = board.getValue(pokemon.targetX, pokemon.targetY)
       let targetCoordinate: { x: number; y: number } | undefined = {
         x: pokemon.targetX,
@@ -39,26 +48,25 @@ export default class AttackingState extends PokemonState {
           ) <= pokemon.range
         )
       ) {
-        targetCoordinate = this.getNearestTargetCoordinate(pokemon, board)
+        // if target is no longer alive or at range, retargeting
+        targetCoordinate = this.getNearestTargetAtRangeCoordinates(
+          pokemon,
+          board
+        )
         if (targetCoordinate) {
           target = board.getValue(targetCoordinate.x, targetCoordinate.y)
         }
       }
 
-      // no target case
-      if (!targetCoordinate) {
-        pokemon.toMovingState()
-      } else if (pokemon.status.charm) {
-        pokemon.toMovingState()
-      } else if (
-        distanceC(
-          pokemon.positionX,
-          pokemon.positionY,
-          targetCoordinate.x,
-          targetCoordinate.y
-        ) > pokemon.range
-      ) {
-        pokemon.toMovingState()
+      // no target at range, changing to moving state
+      if (!target || !targetCoordinate || pokemon.status.charm) {
+        const targetAtSight = this.getNearestTargetAtSightCoordinates(
+          pokemon,
+          board
+        )
+        if (targetAtSight) {
+          pokemon.toMovingState()
+        }
       } else if (
         target &&
         pokemon.pp >= pokemon.maxPP &&
@@ -76,7 +84,6 @@ export default class AttackingState extends PokemonState {
           target,
           crit
         )
-        pokemon.onCast()
       } else {
         // BASIC ATTACK
         pokemon.count.attackCount++
@@ -122,22 +129,56 @@ export default class AttackingState extends PokemonState {
         target
       )
 
-      let physicalDamage = pokemon.atk
+      let damage = pokemon.atk
+      let physicalDamage = 0
       let specialDamage = 0
       let trueDamage = 0
       let totalTakenDamage = 0
 
+      if (Math.random() * 100 < pokemon.critChance) {
+        pokemon.onCriticalAttack({ target, board })
+        if (target.items.has(Item.ROCKY_HELMET) === false) {
+          let opponentCritDamage = pokemon.critDamage
+          if (target.effects.has(Effect.BATTLE_ARMOR)) {
+            opponentCritDamage -= 0.3
+          } else if (target.effects.has(Effect.MOUTAIN_RESISTANCE)) {
+            opponentCritDamage -= 0.5
+          } else if (target.effects.has(Effect.DIAMOND_STORM)) {
+            opponentCritDamage -= 0.7
+          }
+          damage = Math.round(damage * opponentCritDamage)
+        }
+      }
+
       if (pokemon.items.has(Item.FIRE_GEM)) {
-        physicalDamage = Math.round(physicalDamage + target.hp * 0.08)
+        damage = Math.round(damage + target.hp * 0.08)
       }
 
       if (pokemon.attackType === AttackType.SPECIAL) {
-        specialDamage = Math.ceil(physicalDamage * (1 + pokemon.ap / 100))
-        physicalDamage = 0
+        damage = Math.ceil(damage * (1 + pokemon.ap / 100))
       }
 
       if (pokemon.passive === Passive.SPOT_PANDA && target.status.confusion) {
-        specialDamage = Math.ceil(physicalDamage * (1 + pokemon.ap / 100))
+        damage = Math.ceil(damage * (1 + pokemon.ap / 100))
+      }
+
+      let trueDamagePart = 0
+      if (pokemon.effects.has(Effect.STEEL_SURGE)) {
+        trueDamagePart += 0.33
+      } else if (pokemon.effects.has(Effect.STEEL_SPIKE)) {
+        trueDamagePart += 0.66
+      } else if (pokemon.effects.has(Effect.CORKSCREW_CRASH)) {
+        trueDamagePart += 1.0
+      } else if (pokemon.effects.has(Effect.MAX_MELTDOWN)) {
+        trueDamagePart += 1.5
+      }
+      if (pokemon.items.has(Item.RED_ORB) && target) {
+        trueDamagePart += 0.25
+      }
+      if (pokemon.effects.has(Effect.LOCK_ON) && target) {
+        trueDamagePart += 1.0 + pokemon.ap / 100
+        target.status.triggerArmorReduction(3000)
+        pokemon.effects.delete(Effect.LOCK_ON)
       }
 
       let isAttackSuccessful = true
@@ -156,56 +197,18 @@ export default class AttackingState extends PokemonState {
         !target.status.freeze
       ) {
         isAttackSuccessful = false
-        physicalDamage = 0
-        specialDamage = 0
+        damage = 0
         target.count.dodgeCount += 1
       }
       if (target.status.protect) {
         isAttackSuccessful = false
-        physicalDamage = 0
-        specialDamage = 0
-      }
-
-      if (Math.random() * 100 < pokemon.critChance) {
-        pokemon.onCritical(target, board)
-        if (target.items.has(Item.ROCKY_HELMET) === false) {
-          let opponentCritDamage = pokemon.critDamage
-          if (target.effects.has(Effect.BATTLE_ARMOR)) {
-            opponentCritDamage -= 0.3
-          } else if (target.effects.has(Effect.MOUTAIN_RESISTANCE)) {
-            opponentCritDamage -= 0.5
-          } else if (target.effects.has(Effect.DIAMOND_STORM)) {
-            opponentCritDamage -= 0.7
-          }
-          physicalDamage = Math.round(pokemon.atk * opponentCritDamage)
-        }
-      }
-
-      let trueDamagePart = 0
-      if (pokemon.hasSynergyEffect(Synergy.GHOST)) {
-        if (pokemon.effects.has(Effect.PHANTOM_FORCE)) {
-          trueDamagePart += 0.2
-        } else if (pokemon.effects.has(Effect.CURSE)) {
-          trueDamagePart += 0.4
-        } else if (pokemon.effects.has(Effect.SHADOW_TAG)) {
-          trueDamagePart += 0.7
-        } else if (pokemon.effects.has(Effect.WANDERING_SPIRIT)) {
-          trueDamagePart += 1.0
-        }
-      }
-      if (pokemon.items.has(Item.RED_ORB) && target) {
-        trueDamagePart += 0.25
-      }
-      if (pokemon.effects.has(Effect.LOCK_ON) && target) {
-        trueDamagePart += 1.0 + pokemon.ap / 100
-        target.status.triggerArmorReduction(3000)
-        pokemon.effects.delete(Effect.LOCK_ON)
+        damage = 0
       }
 
       if (trueDamagePart > 0) {
         // Apply true damage part
-        trueDamage = Math.ceil(physicalDamage * trueDamagePart)
-        physicalDamage = min(0)(physicalDamage * (1 - trueDamagePart))
+        trueDamage = Math.ceil(damage * trueDamagePart)
+        damage = min(0)(damage * (1 - trueDamagePart))
 
         const { takenDamage } = target.handleDamage({
           damage: trueDamage,
@@ -215,6 +218,16 @@ export default class AttackingState extends PokemonState {
           shouldTargetGainMana: true
         })
         totalTakenDamage += takenDamage
+      }
+
+      if (pokemon.attackType === AttackType.SPECIAL) {
+        specialDamage = damage
+      } else {
+        physicalDamage = damage
+      }
+
+      if (pokemon.passive === Passive.SPOT_PANDA && target.status.confusion) {
+        specialDamage += 1 * damage * (1 + pokemon.ap / 100)
       }
 
       if (physicalDamage > 0) {

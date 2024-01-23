@@ -1,4 +1,4 @@
-import React from "react"
+import React, { useEffect, useState } from "react"
 import { Tooltip } from "react-tooltip"
 import { Pokemon } from "../../../../../models/colyseus-models/pokemon"
 import { IPokemonConfig } from "../../../../../models/mongo-models/user-metadata"
@@ -6,12 +6,12 @@ import { RarityColor } from "../../../../../types/Config"
 import { getPortraitSrc } from "../../../utils"
 import { GamePokemonDetail } from "./game-pokemon-detail"
 import SynergyIcon from "../icons/synergy-icon"
-import { getGameScene } from "../../game"
 import { Pkm, PkmIndex } from "../../../../../types/enum/Pokemon"
 import { Money } from "../icons/money"
 import { useAppSelector } from "../../../hooks"
-import "./game-pokemon-portrait.css"
 import PokemonFactory from "../../../../../models/pokemon-factory"
+import { CountEvolutionRule } from "../../../../../core/evolution-rules"
+import "./game-pokemon-portrait.css"
 
 export default function GamePokemonPortrait(props: {
   index: number
@@ -23,7 +23,6 @@ export default function GamePokemonPortrait(props: {
     return <div className="game-pokemon-portrait nes-container empty" />
   } else {
     const rarityColor = RarityColor[props.pokemon.rarity]
-    const boardManager = getGameScene()?.board
     const pokemonCollection = useAppSelector(
       (state) => state.game.pokemonCollection
     )
@@ -35,34 +34,55 @@ export default function GamePokemonPortrait(props: {
     const currentPlayerId: string = useAppSelector(
       (state) => state.game.currentPlayerId
     )
+    const board = useAppSelector(
+      (state) => state.game.players.find((p) => p.id === uid)?.board
+    )
     const isOnAnotherBoard = currentPlayerId !== uid
 
-    let count = 0
-    let countEvol = 0
+    const [count, setCount] = useState(0)
+    const [countEvol, setCountEvol] = useState(0)
+
+    useEffect(() => {
+      let _count = 0
+      let _countEvol = 0
+      if (board && board.forEach && !isOnAnotherBoard && props.pokemon) {
+        board.forEach((p) => {
+          if (p.index === props.pokemon!.index && p.evolution !== Pkm.DEFAULT) {
+            _count++
+          }
+          if (
+            pokemonEvolution !== Pkm.DEFAULT &&
+            p.evolution !== Pkm.DEFAULT &&
+            p.index === PkmIndex[pokemonEvolution]
+          ) {
+            _countEvol++
+          }
+        })
+      }
+
+      setCount(_count)
+      setCountEvol(_countEvol)
+    }, [board?.size, props.pokemon]) // recount where board size or pokemon on this shop cell changes
+
     let pokemonEvolution = props.pokemon.evolution
-    let pokemonEvolution2 = Pkm.DEFAULT
+    const pokemonEvolution2 =
+      PokemonFactory.createPokemonFromName(pokemonEvolution).evolution
 
-    if (boardManager && !isOnAnotherBoard) {
-      boardManager.pokemons.forEach((p) => {
-        if (p.index === props.pokemon!.index && p.evolution !== Pkm.DEFAULT) {
-          count++
-        }
-        if (
-          pokemonEvolution !== Pkm.DEFAULT &&
-          p.evolution !== Pkm.DEFAULT &&
-          p.index === PkmIndex[pokemonEvolution]
-        ) {
-          pokemonEvolution2 = p.evolution
-          countEvol++
-        }
-      })
-    }
+    const willEvolve =
+      props.pokemon.evolutionRule instanceof CountEvolutionRule &&
+      count === props.pokemon.evolutionRule.numberRequired - 1
 
-    const willEvolve = count === 2
     const shouldShimmer =
-      (count > 0 && pokemonEvolution !== Pkm.DEFAULT) ||
-      (countEvol > 0 && pokemonEvolution2 !== Pkm.DEFAULT)
-    if (count === 2 && countEvol === 2 && pokemonEvolution2 != null)
+      props.pokemon.evolutionRule instanceof CountEvolutionRule &&
+      ((count > 0 && pokemonEvolution !== Pkm.DEFAULT) ||
+        (countEvol > 0 && pokemonEvolution2 !== Pkm.DEFAULT))
+
+    if (
+      props.pokemon.evolutionRule instanceof CountEvolutionRule &&
+      count === props.pokemon.evolutionRule.numberRequired - 1 &&
+      countEvol === props.pokemon.evolutionRule.numberRequired - 1 &&
+      pokemonEvolution2 != null
+    )
       pokemonEvolution = pokemonEvolution2
 
     const pokemonInPortrait =

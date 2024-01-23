@@ -5,7 +5,6 @@ import { nanoid } from "nanoid"
 
 import {
   ItemProposalStages,
-  ItemRecipe,
   ItemCarouselStages,
   StageDuration,
   AdditionalPicksStages,
@@ -17,10 +16,11 @@ import {
 } from "../../types/Config"
 import {
   Item,
+  ItemRecipe,
   BasicItems,
   Berries,
-  SynergyStones,
-  SynergyByStone
+  SynergyGivenByItem,
+  SynergyItems
 } from "../../types/enum/Item"
 import { BattleResult } from "../../types/enum/Game"
 import Player from "../../models/colyseus-models/player"
@@ -51,8 +51,10 @@ import { resetArraySchema, values } from "../../utils/schemas"
 import {
   CountEvolutionRule,
   HatchEvolutionRule,
+  MoneyEvolutionRule,
   TurnEvolutionRule
 } from "../../core/evolution-rules"
+import { Synergy, SynergyEffects } from "../../types/enum/Synergy"
 
 export class OnShopCommand extends Command<
   GameRoom,
@@ -86,12 +88,6 @@ export class OnShopCommand extends Command<
     if (!canBuy) return
 
     player.money -= cost
-    if (
-      pokemon.passive === Passive.PROTEAN2 ||
-      pokemon.passive === Passive.PROTEAN3
-    ) {
-      this.room.checkDynamicSynergies(player, pokemon)
-    }
 
     const x = player.getFirstAvailablePositionInBench()
     pokemon.positionX = x !== undefined ? x : -1
@@ -134,15 +130,9 @@ export class OnDragDropCommand extends Command<
       message.updateItems = false
       const pokemon = player.board.get(detail.id)
       if (pokemon) {
-        if (
-          pokemon.passive === Passive.PROTEAN2 ||
-          pokemon.passive === Passive.PROTEAN3
-        ) {
-          this.room.checkDynamicSynergies(player, pokemon)
-        }
         const x = parseInt(detail.x)
         const y = parseInt(detail.y)
-        if (pokemon.name === Pkm.DITTO) {
+        if (pokemon.name === Pkm.DITTO && !player.isPositionEmpty(x, y)) {
           const pokemonToClone = this.room.getPokemonByPosition(player, x, y)
           if (pokemonToClone && pokemonToClone.canBeCloned) {
             dittoReplaced = true
@@ -189,20 +179,11 @@ export class OnDragDropCommand extends Command<
             ) {
               // Prevents a pokemon to go on the board only if it's adding a pokemon from the bench on a full board
               this.room.swap(player, pokemon, x, y)
-              pokemon.onChangePosition(
-                x,
-                y,
-                player,
-                this.room.state.lightX,
-                this.room.state.lightY
-              )
+              pokemon.onChangePosition(x, y, player)
               success = true
             }
           }
         }
-        player.synergies.update(player.board)
-        player.effects.update(player.synergies, player.board)
-        player.boardSize = this.room.getTeamSize(player.board)
       }
 
       if (!success && client.send) {
@@ -212,8 +193,9 @@ export class OnDragDropCommand extends Command<
         this.room.checkEvolutionsAfterPokemonAcquired(playerId)
       }
 
-      player.synergies.update(player.board)
+      player.updateSynergies()
       player.effects.update(player.synergies, player.board)
+      player.boardSize = this.room.getTeamSize(player.board)
     }
     if (commands.length > 0) {
       return commands
@@ -287,7 +269,7 @@ export class OnDragDropCombineCommand extends Command<
         player.items.delete(itemB)
       }
 
-      player.synergies.update(player.board)
+      player.updateSynergies()
       player.effects.update(player.synergies, player.board)
     }
   }
@@ -339,8 +321,8 @@ export class OnDragDropItemCommand extends Command<
     }
 
     if (
-      SynergyStones.includes(item) &&
-      pokemon.types.has(SynergyByStone[item])
+      SynergyItems.includes(item) &&
+      pokemon.types.has(SynergyGivenByItem[item])
     ) {
       // prevent adding a synergy stone on a pokemon that already has this synergy
       client.send(Transfer.DRAG_DROP_FAILED, message)
@@ -361,8 +343,8 @@ export class OnDragDropItemCommand extends Command<
           const itemCombined = recipe[0] as Item
 
           if (
-            itemCombined in SynergyByStone &&
-            pokemon.types.has(SynergyByStone[itemCombined])
+            itemCombined in SynergyGivenByItem &&
+            pokemon.types.has(SynergyGivenByItem[itemCombined])
           ) {
             // prevent combining into a synergy stone on a pokemon that already has this synergy
             client.send(Transfer.DRAG_DROP_FAILED, message)
@@ -406,7 +388,7 @@ export class OnDragDropItemCommand extends Command<
 
     this.room.checkEvolutionsAfterItemAcquired(playerId, pokemon)
 
-    player.synergies.update(player.board)
+    player.updateSynergies()
     player.effects.update(player.synergies, player.board)
     if (commands.length > 0) {
       return commands
@@ -436,14 +418,14 @@ export class OnSellDropCommand extends Command<
 
       if (pokemon) {
         this.state.shop.releasePokemon(pokemon.name)
-        player.money += PokemonFactory.getSellPrice(pokemon.name)
+        player.money += PokemonFactory.getSellPrice(pokemon.name, player)
         pokemon.items.forEach((it) => {
           player.items.add(it)
         })
 
         player.board.delete(detail.pokemonId)
 
-        player.synergies.update(player.board)
+        player.updateSynergies()
         player.effects.update(player.synergies, player.board)
         player.boardSize = this.room.getTeamSize(player.board)
       }
@@ -653,7 +635,7 @@ export class OnUpdatePhaseCommand extends Command<GameRoom> {
           case Effect.STEEL_SURGE:
             player.titles.add(Title.ENGINEER)
             break
-          case Effect.DRILLER:
+          case Effect.DEEP_MINER:
             player.titles.add(Title.GEOLOGIST)
             break
           case Effect.TOXIC:
@@ -704,7 +686,7 @@ export class OnUpdatePhaseCommand extends Command<GameRoom> {
           case Effect.PRESTO:
             player.titles.add(Title.MUSICIAN)
             break
-          case Effect.BREEDER:
+          case Effect.GOLDEN_EGGS:
             player.titles.add(Title.BABYSITTER)
             break
           case Effect.MAX_ILLUMINATION:
@@ -884,7 +866,7 @@ export class OnUpdatePhaseCommand extends Command<GameRoom> {
     })
   }
 
-  registerBattleResults(isPVE: boolean) {
+  registerBattleResults() {
     this.state.players.forEach((player) => {
       if (player.alive) {
         const currentResult = this.state.simulations
@@ -892,10 +874,10 @@ export class OnUpdatePhaseCommand extends Command<GameRoom> {
           ?.getCurrentBattleResult(player.id)
         if (currentResult) {
           player.addBattleResult(
+            player.opponentId,
             player.opponentName,
             currentResult,
             player.opponentAvatar,
-            isPVE,
             this.state.simulations.get(player.simulationId)?.weather
           )
         }
@@ -998,11 +980,6 @@ export class OnUpdatePhaseCommand extends Command<GameRoom> {
       if (player.effects.has(Effect.SPORE)) {
         player.berryTreeStage = max(3)(player.berryTreeStage + 3)
       }
-      player.board.forEach((pkm) => {
-        if (pkm.passive === Passive.HARVEST && pkm.items.size < 3) {
-          pkm.items.add(pickRandomIn(Berries))
-        }
-      })
     })
 
     return commands
@@ -1023,8 +1000,8 @@ export class OnUpdatePhaseCommand extends Command<GameRoom> {
             this.room.swap(player, pokemon, coordinate[0], coordinate[1])
           }
         }
-        if(numberOfPokemonsToMove > 0){
-          player.synergies.update(player.board)
+        if (numberOfPokemonsToMove > 0) {
+          player.updateSynergies()
         }
       }
     })
@@ -1057,7 +1034,7 @@ export class OnUpdatePhaseCommand extends Command<GameRoom> {
     this.computeAchievements()
     this.computeStreak(isPVE)
     this.computeLife()
-    this.registerBattleResults(isPVE)
+    this.registerBattleResults()
     this.rankPlayers()
     this.checkDeath()
     this.computeIncome()
@@ -1100,12 +1077,15 @@ export class OnUpdatePhaseCommand extends Command<GameRoom> {
         if (
           player.getFreeSpaceOnBench() > 0 &&
           player.getLastBattleResult() == BattleResult.DEFEAT &&
-          (player.effects.has(Effect.HATCHER) ||
-            player.effects.has(Effect.BREEDER))
+          SynergyEffects[Synergy.BABY].some((effect) =>
+            player.effects.has(effect)
+          )
         ) {
-          const eggChance = player.effects.has(Effect.BREEDER)
-            ? 1
-            : 0.2 * player.streak
+          const eggChance =
+            player.effects.has(Effect.BREEDER) ||
+            player.effects.has(Effect.GOLDEN_EGGS)
+              ? 1
+              : 0.2 * player.streak
           if (chance(eggChance)) {
             const egg = PokemonFactory.createRandomEgg()
             const x = player.getFirstAvailablePositionInBench()
@@ -1140,12 +1120,19 @@ export class OnUpdatePhaseCommand extends Command<GameRoom> {
                 this.state.stageLevel
               )
             }
+            if (pokemon.evolutionRule instanceof MoneyEvolutionRule) {
+              pokemon.evolutionRule.tryEvolve(
+                pokemon,
+                player,
+                this.state.stageLevel
+              )
+            }
           }
           if (pokemon.passive === Passive.UNOWN && !pokemon.isOnBench) {
             // remove after one fight
             player.board.delete(key)
             player.board.delete(pokemon.id)
-            player.synergies.update(player.board)
+            player.updateSynergies()
             player.effects.update(player.synergies, player.board)
             if (!player.shopLocked) {
               this.state.shop.assignShop(player, false, this.state.stageLevel) // refresh unown shop in case player lost psychic 6
@@ -1153,7 +1140,7 @@ export class OnUpdatePhaseCommand extends Command<GameRoom> {
           }
         })
         // Refreshes effects (like tapu Terrains)
-        player.synergies.update(player.board)
+        player.updateSynergies()
         player.effects.update(player.synergies, player.board)
       }
     })
@@ -1199,8 +1186,8 @@ export class OnUpdatePhaseCommand extends Command<GameRoom> {
             this.state.shinyEncounter,
             pveStage.emotion
           )
-          player.opponentTitle = "Wild"
-          const rewards = pveStage.getRewards(this.state.shinyEncounter)
+          player.opponentTitle = "WILD"
+          const rewards = pveStage.getRewards(this.state.shinyEncounter, player)
           resetArraySchema(player.pveRewards, rewards)
 
           const pveBoard = PokemonFactory.makePveBoard(

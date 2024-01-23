@@ -19,7 +19,7 @@ import admin from "firebase-admin"
 import { WebhookClient } from "discord.js"
 import { BotV2, IBot } from "../models/mongo-models/bot-v2"
 import { PastebinAPI } from "pastebin-ts/dist/api"
-import { Emotion, Transfer, Title, Role } from "../types"
+import { Emotion, Transfer, Title, Role, IPlayer } from "../types"
 import { nanoid } from "nanoid"
 import { logger } from "../utils/logger"
 import {
@@ -45,9 +45,17 @@ import {
   DeleteBotCommand,
   OnBotUploadCommand,
   createBotList,
-  SelectLanguageCommand
+  SelectLanguageCommand,
+  OpenRankedLobbyCommand,
+  MakeServerAnnouncementCommand
 } from "./commands/lobby-commands"
 import { Language } from "../types/enum/Language"
+import { CronJob } from "cron"
+import {
+  EloRank,
+  GREATBALL_RANKED_LOBBY_CRON,
+  ULTRABALL_RANKED_LOBBY_CRON
+} from "../types/Config"
 
 export default class CustomLobbyRoom extends Room<LobbyState> {
   discordWebhook: WebhookClient | undefined
@@ -97,6 +105,7 @@ export default class CustomLobbyRoom extends Room<LobbyState> {
   async onCreate(): Promise<void> {
     logger.info("create lobby", this.roomId)
     this.setState(new LobbyState())
+    this.state.getNextSpecialLobbyDate()
     this.autoDispose = false
     this.listing.unlisted = true
 
@@ -109,8 +118,6 @@ export default class CustomLobbyRoom extends Room<LobbyState> {
         if (!data) {
           // remove room listing data
           if (roomIndex !== -1) {
-            const previousData = this.rooms[roomIndex]
-
             this.rooms.splice(roomIndex, 1)
 
             this.clients.forEach((client) => {
@@ -348,6 +355,16 @@ export default class CustomLobbyRoom extends Room<LobbyState> {
     })
 
     this.onMessage(
+      Transfer.SERVER_ANNOUNCEMENT,
+      (client, { message }: { message: string }) => {
+        this.dispatcher.dispatch(new MakeServerAnnouncementCommand(), {
+          client,
+          message
+        })
+      }
+    )
+
+    this.onMessage(
       Transfer.CHANGE_AVATAR,
       (
         client,
@@ -365,8 +382,14 @@ export default class CustomLobbyRoom extends Room<LobbyState> {
         })
       }
     )
-    await this.fetchChat()
-    await this.fetchLeaderboards()
+
+    this.presence.subscribe("ranked-lobby-winner", (player: IPlayer) => {
+      this.state.addAnnouncement(`${player.name} won the ranked match !`)
+    })
+
+    this.initCronJobs()
+    this.fetchChat()
+    this.fetchLeaderboards()
   }
 
   async onAuth(client: Client, options: any, request: any) {
@@ -447,16 +470,13 @@ export default class CustomLobbyRoom extends Room<LobbyState> {
     )
 
     if (users) {
-      for (let i = 0; i < users.length; i++) {
-        const user = users[i]
-        this.leaderboard.push({
-          name: user.displayName,
-          rank: i + 1,
-          avatar: user.avatar,
-          value: user.elo,
-          id: user.uid
-        })
-      }
+      this.leaderboard = users.map((user, i) => ({
+        name: user.displayName,
+        rank: i + 1,
+        avatar: user.avatar,
+        value: user.elo,
+        id: user.uid
+      }))
     }
 
     const levelUsers = await UserMetadata.find(
@@ -466,21 +486,19 @@ export default class CustomLobbyRoom extends Room<LobbyState> {
     )
 
     if (levelUsers) {
-      for (let i = 0; i < levelUsers.length; i++) {
-        const user = levelUsers[i]
-        this.levelLeaderboard.push({
-          name: user.displayName,
-          rank: i + 1,
-          avatar: user.avatar,
-          value: user.level,
-          id: user.uid
-        })
-      }
+      this.levelLeaderboard = levelUsers.map((user, i) => ({
+        name: user.displayName,
+        rank: i + 1,
+        avatar: user.avatar,
+        value: user.level,
+        id: user.uid
+      }))
     }
 
     const bots = await BotV2.find({}, {}, { sort: { elo: -1 } })
     if (bots) {
       const ids = new Array<string>()
+      this.botLeaderboard = []
       bots.forEach((bot, i) => {
         if (ids.includes(bot.id)) {
           const id = nanoid()
@@ -498,5 +516,39 @@ export default class CustomLobbyRoom extends Room<LobbyState> {
         })
       })
     }
+  }
+
+  initCronJobs() {
+    logger.debug("initCronJobs")
+    const leaderboardRefreshJob = CronJob.from({
+      cronTime: "0 0/10 * * * *", // every 10 minutes
+      timeZone: "Europe/Paris",
+      onTick: () => this.fetchLeaderboards(),
+      start: true
+    })
+
+    const greatBallRankedLobbyJob = CronJob.from({
+      cronTime: GREATBALL_RANKED_LOBBY_CRON,
+      //cronTime: "0 0/1 * * * *", // DEBUG: trigger every minute
+      timeZone: "Europe/Paris",
+      onTick: () => {
+        this.dispatcher.dispatch(new OpenRankedLobbyCommand(), {
+          minRank: EloRank.GREATBALL
+        })
+      },
+      start: true
+    })
+
+    const ultratBallRankedLobbyJob = CronJob.from({
+      cronTime: ULTRABALL_RANKED_LOBBY_CRON,
+      //cronTime: "0 0/1 * * * *", // DEBUG: trigger every minute
+      timeZone: "Europe/Paris",
+      onTick: () => {
+        this.dispatcher.dispatch(new OpenRankedLobbyCommand(), {
+          minRank: EloRank.ULTRABALL
+        })
+      },
+      start: true
+    })
   }
 }

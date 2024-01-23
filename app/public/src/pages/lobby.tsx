@@ -39,7 +39,9 @@ import {
   setLeaderboard,
   pushBotLog,
   setLanguage,
-  leaveLobby
+  leaveLobby,
+  setNextSpecialLobbyDate,
+  setNextSpecialLobbyType
 } from "../stores/LobbyStore"
 import {
   ICustomLobbyState,
@@ -51,7 +53,7 @@ import LobbyUser from "../../../models/colyseus-models/lobby-user"
 import { IBot } from "../../../models/mongo-models/bot-v2"
 import PokemonConfig from "../../../models/colyseus-models/pokemon-config"
 import i18n from "../i18n"
-import { MainSidebar } from "./component/main-sidebar"
+import { MainSidebar } from "./component/main-sidebar/main-sidebar"
 import store from "../stores"
 import { useTranslation } from "react-i18next"
 
@@ -260,6 +262,14 @@ export async function joinLobbyRoom(
             })
           })
 
+          room.state.listen("nextSpecialLobbyDate", (date) => {
+            dispatch(setNextSpecialLobbyDate(date))
+          });
+
+          room.state.listen("nextSpecialLobbyType", (type) => {
+            dispatch(setNextSpecialLobbyType(type))
+          });
+
           room.state.users.onRemove((u) => {
             dispatch(removeUser(u.id))
           })
@@ -299,7 +309,7 @@ export async function joinLobbyRoom(
           })
 
           room.onMessage(Transfer.ADD_ROOM, ([, room]) => {
-            if (room.name === "room" || room.name === "game") {
+            if (room.name === "preparation" || room.name === "game") {
               dispatch(addRoom(room))
             }
           })

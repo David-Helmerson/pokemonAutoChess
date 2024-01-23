@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react"
+import React, { useEffect, useState } from "react"
 import PreparationMenuUser from "./preparation-menu-user"
 import { IGameUser } from "../../../../../models/colyseus-models/game-user"
 import { useAppDispatch, useAppSelector } from "../../../hooks"
@@ -14,7 +14,7 @@ import {
 } from "../../../stores/NetworkStore"
 import firebase from "firebase/compat/app"
 import { Room } from "colyseus.js"
-import { BotDifficulty } from "../../../../../types/enum/Game"
+import { BotDifficulty, LobbyType } from "../../../../../types/enum/Game"
 import PreparationState from "../../../../../rooms/states/preparation-state"
 import "./preparation-menu.css"
 import { cc } from "../../utils/jsx"
@@ -26,6 +26,7 @@ import { GADGETS } from "../../../../../core/gadgets"
 import { BotSelectModal } from "./bot-select-modal"
 import { IBot } from "../../../../../models/mongo-models/bot-v2"
 import { MapSelectModal } from "./map-select-modal"
+import { setTitleNotificationIcon } from "../../../../../utils/window"
 
 export default function PreparationMenu() {
   const { t } = useTranslation()
@@ -56,6 +57,8 @@ export default function PreparationMenu() {
     (state) => state.preparation.selectedMap
   )
 
+  const lobbyType = useAppSelector((state) => state.preparation.lobbyType)
+
   const [modal, setModal] = useState<string>()
 
   const profile = useAppSelector((state) => state.network.profile)
@@ -66,13 +69,26 @@ export default function PreparationMenu() {
   )
 
   const isReady = users.find((user) => user.id === uid)?.ready
+  const nbUsersReady = users.filter(user => user.ready).length
   const allUsersReady = users.every((user) => user.ready)
+
+  useEffect(() => {    
+    if(allUsersReady) {
+      setTitleNotificationIcon("🟢")
+    } else if(nbUsersReady === 0){
+      setTitleNotificationIcon("🔴")
+    } else if(nbUsersReady === users.length - 1){
+      setTitleNotificationIcon("🟡")
+    } else {
+      setTitleNotificationIcon("🟠")
+    }
+  }, [nbUsersReady, users.length])
 
   const humans = users.filter((u) => !u.isBot)
   const isElligibleForELO = users.filter((u) => !u.isBot).length >= 2
   const averageElo = Math.round(
     humans.reduce((acc, u) => acc + u.elo, 0) / humans.length
-  )
+  )  
 
   function makePrivate() {
     if (password === null) {
@@ -108,35 +124,38 @@ export default function PreparationMenu() {
       </button>
     ) : null
 
+  const headerMessage =
+    lobbyType === LobbyType.RANKED ? (
+      <p>{t("ranked_lobby_hint")}</p>
+    ) : noElo === true ? (
+      <p>
+        <img
+          alt="Just for fun"
+          title="Just for fun (no ELO gain/loss)"
+          className="noelo-icon"
+          src="/assets/ui/noelo.png"
+          style={{ borderRadius: "50%" }}
+        />
+        {t("just_for_fun_hint")}
+      </p>
+    ) : isElligibleForELO ? (
+      <p>
+        {t("elligible_elo_hint")} {t("average_elo")}: {averageElo} ; {t("GLHF")}{" !"}
+      </p>
+    ) : users.length > 1 ? (
+      <p>{t("not_elligible_elo_hint")}</p>
+    ) : (
+      <p>{t("add_bot_or_wait_hint")}</p>
+    )
+
   return (
     <div className="preparation-menu nes-container is-centered custom-bg">
-      <h1>
-        {name}: {users.length}/8
-      </h1>
-
-      <div className="elo-elligibility">
-        {noElo === true ? (
-          <p>
-            <img
-              alt="Just for fun"
-              title="Just for fun (no ELO gain/loss)"
-              className="noelo-icon"
-              src="/assets/ui/noelo.png"
-              style={{ borderRadius: "50%" }}
-            />
-            {t("just_for_fun_hint")}
-          </p>
-        ) : isElligibleForELO ? (
-          <p>
-            {t("elligible_elo_hint")} {t("average_elo")}: {averageElo} ;{" "}
-            {t("GLHF")} !
-          </p>
-        ) : users.length > 1 ? (
-          <p>{t("not_elligible_elo_hint")}</p>
-        ) : (
-          <p>{t("add_bot_or_wait_hint")}</p>
-        )}
-      </div>
+      <header>
+        <h1>
+          {name}: {users.length}/8
+        </h1>
+        {headerMessage}
+      </header>
 
       <div className="preparation-menu-users">
         {users.map((u) => {
@@ -151,142 +170,157 @@ export default function PreparationMenu() {
         })}
       </div>
 
-      {isOwner && (
-        <div className="actions">
-          <Checkbox
-            checked={password != null}
-            onToggle={makePrivate}
-            label={`${t("private_lobby")} ${
-              password ? "Password: " + password : ""
-            }`}
-            isDark
-            title="Add a password to this room"
-          />
-          <Checkbox
-            checked={noElo}
-            onToggle={toggleElo}
-            label={t("just_for_fun")}
-            isDark
-            title="No ELO gain or loss for this game"
-          />
-          <div className="spacer"></div>
-          <div className="gadgets">
-            {profileLevel >= GADGETS.MAP.levelRequired && (
-              <div
-                onClick={() => {
-                  setModal("maps")
-                }}
-              >
-                <span>{t("map." + selectedMap)}</span>
-                <img width={48} height={48} src="assets/ui/map.svg" />
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-      {(isOwner ||
-        (user?.role && [Role.ADMIN, Role.MODERATOR].includes(user.role))) && (
-        <div className="actions">
-          {user && !user.anonymous && (
-            <>
-              <input
-                maxLength={30}
-                type="text"
-                className="my-input"
-                placeholder={name}
-                style={{ flex: 1 }}
-                onChange={(e) => {
-                  setInputValue(e.target.value)
-                }}
+      {lobbyType !== LobbyType.RANKED && (
+        <>
+          {isOwner && (
+            <div className="actions">
+              <Checkbox
+                checked={password != null}
+                onToggle={makePrivate}
+                label={`${t("private_lobby")} ${
+                  password ? "Password: " + password : ""
+                }`}
+                isDark
+                title="Add a password to this room"
               />
-              <button
-                style={{ marginLeft: "10px" }}
-                className="bubbly blue"
-                onClick={() => dispatch(changeRoomName(inputValue))}
-              >
-                {t("change_room_name")}
-              </button>
-              {deleteRoomButton}
-            </>
+              <Checkbox
+                checked={noElo}
+                onToggle={toggleElo}
+                label={t("just_for_fun")}
+                isDark
+                title="No ELO gain or loss for this game"
+              />
+              <div className="spacer"></div>
+              <div className="gadgets">
+                {profileLevel >= GADGETS.MAP.levelRequired && (
+                  <div
+                    onClick={() => {
+                      setModal("maps")
+                    }}
+                  >
+                    <span>{t("map." + selectedMap)}</span>
+                    <img width={48} height={48} src="assets/ui/map.svg" />
+                  </div>
+                )}
+              </div>
+            </div>
           )}
-        </div>
-      )}
+          {(isOwner ||
+            (user?.role &&
+              [Role.ADMIN, Role.MODERATOR].includes(user.role))) && (
+            <div className="actions">
+              {user && !user.anonymous && (
+                <>
+                  <input
+                    maxLength={30}
+                    type="text"
+                    className="my-input"
+                    placeholder={name}
+                    style={{ flex: 1 }}
+                    onChange={(e) => {
+                      setInputValue(e.target.value)
+                    }}
+                  />
+                  <button
+                    style={{ marginLeft: "10px" }}
+                    className="bubbly blue"
+                    onClick={() => dispatch(changeRoomName(inputValue))}
+                  >
+                    {t("change_room_name")}
+                  </button>
+                  {deleteRoomButton}
+                </>
+              )}
+            </div>
+          )}
 
-      <div className="actions">
-        {isOwner ? (
-          <>
+          <div className="actions">
+            {isOwner ? (
+              <>
+                <button
+                  className="bubbly blue"
+                  onClick={() => {
+                    if (botDifficulty === BotDifficulty.CUSTOM) {
+                      dispatch(listBots())
+                    } else {
+                      dispatch(addBot(botDifficulty))
+                    }
+                  }}
+                >
+                  {t("add_bot")}
+                </button>
+
+                <select
+                  className="my-select"
+                  defaultValue={botDifficulty}
+                  onChange={(e) => {
+                    setBotDifficulty(parseInt(e.target.value))
+                  }}
+                >
+                  <option value={BotDifficulty.EASY}>{t("easy_bot")}</option>
+                  <option value={BotDifficulty.MEDIUM}>
+                    {t("normal_bot")}
+                  </option>
+                  <option value={BotDifficulty.HARD}>{t("hard_bot")}</option>
+                  <option value={BotDifficulty.EXTREME}>
+                    {t("extreme_bot")}
+                  </option>
+                  <option value={BotDifficulty.CUSTOM}>
+                    {t("custom_bot")}
+                  </option>
+                </select>
+              </>
+            ) : (
+              <p className="room-leader">
+                {t("room_leader")}: {ownerName}{" "}
+                {password && (
+                  <>
+                    <br />
+                    {t("room_password")}: {password}
+                  </>
+                )}
+              </p>
+            )}
+
+            <div className="spacer" />
+
             <button
-              className="bubbly blue"
+              className={cc(
+                "bubbly",
+                "ready-button",
+                isReady ? "green" : "orange"
+              )}
               onClick={() => {
-                if (botDifficulty === BotDifficulty.CUSTOM) {
-                  dispatch(listBots())
-                } else {
-                  dispatch(addBot(botDifficulty))
-                }
+                dispatch(toggleReady())
               }}
             >
-              {t("add_bot")}
+              {t("ready")} {isReady ? "✔" : "?"}
             </button>
 
-            <select
-              className="my-select"
-              defaultValue={botDifficulty}
-              onChange={(e) => {
-                setBotDifficulty(parseInt(e.target.value))
-              }}
-            >
-              <option value={BotDifficulty.EASY}>{t("easy_bot")}</option>
-              <option value={BotDifficulty.MEDIUM}>{t("normal_bot")}</option>
-              <option value={BotDifficulty.HARD}>{t("hard_bot")}</option>
-              <option value={BotDifficulty.EXTREME}>{t("extreme_bot")}</option>
-              <option value={BotDifficulty.CUSTOM}>{t("custom_bot")}</option>
-            </select>
-          </>
-        ) : (
-          <p className="room-leader">
-            {t("room_leader")}: {ownerName}{" "}
-            {password && (
-              <>
-                <br />
-                {t("room_password")}: {password}
-              </>
+            {isOwner && (
+              <button
+                className={cc("bubbly", {
+                  green: allUsersReady,
+                  orange: !allUsersReady
+                })}
+                onClick={ownerId == uid ? startGame : undefined}
+                data-tooltip-id={"start-game"}
+              >
+                {t("start_game")}
+              </button>
             )}
-          </p>
-        )}
+          </div>
 
-        <div className="spacer" />
-
-        <button
-          className={cc("bubbly", "ready-button", isReady ? "green" : "orange")}
-          onClick={() => {
-            dispatch(toggleReady())
-          }}
-        >
-          {t("ready")} {isReady ? "✔" : "?"}
-        </button>
-
-        {isOwner && (
-          <button
-            className={cc("bubbly", {
-              green: allUsersReady,
-              orange: !allUsersReady
-            })}
-            onClick={ownerId == uid ? startGame : undefined}
-            data-tooltip-id={"start-game"}
-          >
-            {t("start_game")}
-          </button>
-        )}
-      </div>
-
-      {isOwner && botsList != null && <BotSelectModal bots={botsList} />}
-      {isOwner && (
-        <MapSelectModal
-          show={modal === "maps"}
-          handleClose={() => {
-            setModal(undefined)
-          }}
-        />
+          {isOwner && botsList != null && <BotSelectModal bots={botsList} />}
+          {isOwner && (
+            <MapSelectModal
+              show={modal === "maps"}
+              handleClose={() => {
+                setModal(undefined)
+              }}
+            />
+          )}
+        </>
       )}
     </div>
   )

@@ -6,10 +6,16 @@ export enum Rarity {
   ULTRA = "ULTRA",
   UNIQUE = "UNIQUE",
   LEGENDARY = "LEGENDARY",
-  MYTHICAL = "MYTHICAL",
   HATCH = "HATCH",
   SPECIAL = "SPECIAL"
 }
+
+export enum LobbyType {
+  NORMAL = "NORMAL",
+  RANKED = "RANKED"
+}
+
+export type SpecialLobbyType = "GREATBALL_RANKED" | "ULTRABALL_RANKED"
 
 export enum GamePhaseState {
   PICK,

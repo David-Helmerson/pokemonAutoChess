@@ -1,12 +1,19 @@
+import Player from "../models/colyseus-models/player"
 import { PokemonActionState } from "../types/enum/Game"
 import { Passive } from "../types/enum/Passive"
 import Board from "./board"
-import PokemonEntity from "./pokemon-entity"
+import { PokemonEntity } from "./pokemon-entity"
 import PokemonState from "./pokemon-state"
 
 export class IdleState extends PokemonState {
-  update(pokemon: PokemonEntity, dt: number, board: Board, weather: string) {
-    super.update(pokemon, dt, board, weather)
+  update(
+    pokemon: PokemonEntity,
+    dt: number,
+    board: Board,
+    weather: string,
+    player: Player
+  ) {
+    super.update(pokemon, dt, board, weather, player)
 
     if (pokemon.status.tree) {
       if (pokemon.pp >= pokemon.maxPP) {
@@ -20,7 +27,7 @@ export class IdleState extends PokemonState {
     if (pokemon.cooldown <= 0) {
       pokemon.cooldown = 500
       if (pokemon.passive === Passive.SUDOWOODO && pokemon.status.tree) {
-        pokemon.addAttack(1)
+        pokemon.addAttack(pokemon.stars === 1 ? 1 : 2)
       }
     } else {
       pokemon.cooldown -= dt

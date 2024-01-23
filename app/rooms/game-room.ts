@@ -23,6 +23,7 @@ import {
 import {
   AdditionalPicksStages,
   DungeonPMDO,
+  EloRank,
   ExpPlace,
   LegendaryShop,
   PortalCarouselStages,
@@ -31,7 +32,7 @@ import {
 } from "../types/Config"
 import { Item } from "../types/enum/Item"
 import PokemonFactory from "../models/pokemon-factory"
-import EloRank from "elo-rank"
+import EloEngine from "elo-rank"
 import admin from "firebase-admin"
 import DetailledStatistic from "../models/mongo-models/detailled-statistic-v2"
 import {
@@ -55,11 +56,10 @@ import { Title, Role } from "../types"
 import { PRECOMPUTED_POKEMONS_PER_TYPE_AND_CATEGORY } from "../models/precomputed"
 import BannedUser from "../models/mongo-models/banned-user"
 import { shuffleArray } from "../utils/random"
-import { Rarity } from "../types/enum/Game"
+import { LobbyType, Rarity } from "../types/enum/Game"
 import { MiniGame } from "../core/matter/mini-game"
 import { logger } from "../utils/logger"
 import { computeElo } from "../core/elo"
-import { Passive } from "../types/enum/Passive"
 import { getAvatarString } from "../public/src/utils"
 import { keys, values } from "../utils/schemas"
 import { removeInArray } from "../utils/array"
@@ -67,7 +67,7 @@ import { CountEvolutionRule, ItemEvolutionRule } from "../core/evolution-rules"
 
 export default class GameRoom extends Room<GameState> {
   dispatcher: Dispatcher<this>
-  eloEngine: EloRank
+  eloEngine: EloEngine
   additionalUncommonPool: Array<Pkm>
   additionalRarePool: Array<Pkm>
   additionalEpicPool: Array<Pkm>
@@ -75,7 +75,7 @@ export default class GameRoom extends Room<GameState> {
   constructor() {
     super()
     this.dispatcher = new Dispatcher(this)
-    this.eloEngine = new EloRank()
+    this.eloEngine = new EloEngine()
     this.additionalUncommonPool = new Array<Pkm>()
     this.additionalRarePool = new Array<Pkm>()
     this.additionalEpicPool = new Array<Pkm>()
@@ -87,9 +87,10 @@ export default class GameRoom extends Room<GameState> {
     users: MapSchema<IGameUser>
     preparationId: string
     name: string
-    idToken: string
     noElo: boolean
     selectedMap: DungeonPMDO | "random"
+    lobbyType: LobbyType
+    minRank: EloRank | null
     whenReady: (room: GameRoom) => void
   }) {
     logger.trace("create game room")
@@ -107,7 +108,9 @@ export default class GameRoom extends Room<GameState> {
         options.preparationId,
         options.name,
         options.noElo,
-        options.selectedMap
+        options.selectedMap,
+        options.lobbyType,
+        options.minRank
       )
     )
     this.miniGame.create(
@@ -161,7 +164,8 @@ export default class GameRoom extends Room<GameState> {
             this.state.players.size + 1,
             new Map<string, IPokemonConfig>(),
             "",
-            Role.BOT
+            Role.BOT,
+            this.state
           )
           this.state.players.set(user.id, player)
           this.state.botManager.addBot(player)
@@ -179,7 +183,8 @@ export default class GameRoom extends Room<GameState> {
               this.state.players.size + 1,
               user.pokemonCollection,
               user.title,
-              user.role
+              user.role,
+              this.state
             )
 
             this.state.players.set(user.uid, player)
@@ -592,6 +597,22 @@ export default class GameRoom extends Room<GameState> {
 
             if (rank === 1) {
               usr.wins += 1
+              if (this.state.lobbyType === LobbyType.RANKED) {
+                if (this.state.minRank === EloRank.GREATBALL) {
+                  usr.booster += 1
+                }
+                if (this.state.minRank === EloRank.ULTRABALL) {
+                  usr.booster += 5
+                }
+                player.titles.add(Title.VANQUISHER)
+                const minElo = Math.min(
+                  ...values(this.state.players).map((p) => p.elo)
+                )
+                if (usr.elo === minElo && humans.length >= 8) {
+                  player.titles.add(Title.OUTSIDER)
+                }
+                this.presence.publish("ranked-lobby-winner", player)
+              }
             }
 
             if (usr.level >= 10) {
@@ -738,9 +759,7 @@ export default class GameRoom extends Room<GameState> {
       pokemonToSwap.onChangePosition(
         pokemon.positionX,
         pokemon.positionY,
-        player,
-        this.state.lightX,
-        this.state.lightY
+        player
       )
     }
     pokemon.positionX = x
@@ -755,33 +774,6 @@ export default class GameRoom extends Room<GameState> {
     return values(player.board).find(
       (pokemon) => pokemon.positionX == x && pokemon.positionY == y
     )
-  }
-
-  checkDynamicSynergies(player: Player, pokemon: Pokemon) {
-    const n =
-      pokemon.passive === Passive.PROTEAN3
-        ? 3
-        : pokemon.passive === Passive.PROTEAN2
-        ? 2
-        : 1
-    const rankArray = new Array<{ s: Synergy; v: number }>()
-    player.synergies.forEach((value, key) => {
-      if (value > 0) {
-        rankArray.push({ s: key as Synergy, v: value })
-      }
-    })
-    rankArray.sort((a, b) => {
-      return b.v - a.v
-    })
-    pokemon.types.clear()
-    for (let i = 0; i < n; i++) {
-      const kv = rankArray.shift()
-      if (kv) {
-        pokemon.types.add(kv.s)
-      }
-    }
-    player.synergies.update(player.board)
-    player.effects.update(player.synergies, player.board)
   }
 
   checkEvolutionsAfterPokemonAcquired(playerId: string) {
@@ -860,12 +852,12 @@ export default class GameRoom extends Room<GameState> {
     if (this.state.additionalPokemons.includes(pkm)) return // already picked, probably a double click
     if (UniqueShop.includes(pkm)) {
       if (this.state.stageLevel !== PortalCarouselStages[0]) return // should not be pickable at this stage
-      if (values(player.board).some((p) => UniqueShop.includes(p.name))) return // already picked a T10 mythical
+      if (values(player.board).some((p) => UniqueShop.includes(p.name))) return // already picked a unique
     }
     if (LegendaryShop.includes(pkm)) {
       if (this.state.stageLevel !== PortalCarouselStages[1]) return // should not be pickable at this stage
       if (values(player.board).some((p) => LegendaryShop.includes(p.name)))
-        return // already picked a T10 mythical
+        return // already picked a legendary
     }
 
     const pokemonsObtained: Pokemon[] = (

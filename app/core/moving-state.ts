@@ -1,5 +1,5 @@
 import Board from "./board"
-import PokemonEntity from "./pokemon-entity"
+import { PokemonEntity } from "./pokemon-entity"
 import PokemonState from "./pokemon-state"
 import { BoardEvent, PokemonActionState } from "../types/enum/Game"
 import { Synergy } from "../types/enum/Synergy"
@@ -8,24 +8,28 @@ import { Weather } from "../types/enum/Weather"
 import { Passive } from "../types/enum/Passive"
 import { Effect } from "../types/enum/Effect"
 import { Transfer } from "../types"
+import Player from "../models/colyseus-models/player"
 
 export default class MovingState extends PokemonState {
-  update(pokemon: PokemonEntity, dt: number, board: Board, weather: string) {
-    super.update(pokemon, dt, board, weather)
+  update(pokemon: PokemonEntity, dt: number, board: Board, weather: string, player: Player) {
+    super.update(pokemon, dt, board, weather, player)
     if (pokemon.cooldown <= 0) {
       pokemon.cooldown = weather === Weather.SNOW ? 666 : 500
-      const targetCoordinate = this.getNearestTargetCoordinate(pokemon, board)
-      if (targetCoordinate) {
-        const distance = distanceC(
-          pokemon.positionX,
-          pokemon.positionY,
-          targetCoordinate.x,
-          targetCoordinate.y
-        )
-        if (distance <= pokemon.range && !pokemon.status.charm) {
+      const targetAtRange = this.getNearestTargetAtRangeCoordinates(
+        pokemon,
+        board
+      )
+      if (targetAtRange) {
+        if (!pokemon.status.charm) {
           pokemon.toAttackingState()
-        } else if (distance > 1) {
-          this.move(pokemon, board, targetCoordinate)
+        }
+      } else {
+        const targetAtSight = this.getNearestTargetAtSightCoordinates(
+          pokemon,
+          board
+        )
+        if (targetAtSight) {
+          this.move(pokemon, board, targetAtSight)
         }
       }
     } else {
@@ -43,6 +47,7 @@ export default class MovingState extends PokemonState {
     let x: number | undefined = undefined
     let y: number | undefined = undefined
     if (pokemon.types.has(Synergy.DARK) && pokemon.baseRange === 1) {
+      // dark jump
       const farthestCoordinate = this.getFarthestTargetCoordinateAvailablePlace(
         pokemon,
         board
@@ -68,6 +73,17 @@ export default class MovingState extends PokemonState {
               }
             })
         }
+
+        // logger.debug(`pokemon ${pokemon.name} jumped from (${pokemon.positionX},${pokemon.positionY}) to (${x},${y}), (desired direction (${coordinates.x}, ${coordinates.y})), orientation: ${pokemon.orientation}`);
+        board.swapValue(pokemon.positionX, pokemon.positionY, x, y)
+        pokemon.orientation = board.orientation(
+          x,
+          y,
+          pokemon.targetX,
+          pokemon.targetY,
+          pokemon,
+          undefined
+        )
       }
     } else {
       const cells = board.getAdjacentCells(pokemon.positionX, pokemon.positionY)
@@ -89,24 +105,26 @@ export default class MovingState extends PokemonState {
           }
         }
       })
-    }
-    if (x !== undefined && y !== undefined) {
-      pokemon.orientation = board.orientation(
-        pokemon.positionX,
-        pokemon.positionY,
-        x,
-        y,
-        pokemon,
-        undefined
-      )
-      // logger.debug(`pokemon ${pokemon.name} moved from (${pokemon.positionX},${pokemon.positionY}) to (${x},${y}), (desired direction (${coordinates.x}, ${coordinates.y})), orientation: ${pokemon.orientation}`);
-      board.swapValue(pokemon.positionX, pokemon.positionY, x, y)
+
+      if (x !== undefined && y !== undefined) {
+        pokemon.orientation = board.orientation(
+          pokemon.positionX,
+          pokemon.positionY,
+          x,
+          y,
+          pokemon,
+          undefined
+        )
+        // logger.debug(`pokemon ${pokemon.name} moved from (${pokemon.positionX},${pokemon.positionY}) to (${x},${y}), (desired direction (${coordinates.x}, ${coordinates.y})), orientation: ${pokemon.orientation}`);
+        board.swapValue(pokemon.positionX, pokemon.positionY, x, y)
+      }
     }
   }
 
   onEnter(pokemon: PokemonEntity) {
     super.onEnter(pokemon)
     pokemon.action = PokemonActionState.WALK
+    pokemon.cooldown = 0
   }
 
   onExit(pokemon: PokemonEntity) {
